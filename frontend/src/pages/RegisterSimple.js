@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
+import { GoogleSignInButton, OrDivider } from '@/components/GoogleSignInButton';
 import { markInstallReferrerConsumed } from '@/utils/installReferrer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { API, BACKEND_URL } from "../lib/api";
 const RegisterSimple = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const googleProfile = useLocation().state?.googleProfile || null;
 
   // Referral attribution with cross-navigation persistence.
   //
@@ -68,9 +70,9 @@ const RegisterSimple = () => {
   }, [urlRefCode]);
 
   const [formData, setFormData] = useState({
-    full_name: '',
+    full_name: googleProfile?.name || '',
     mobile: '',
-    email: '',
+    email: googleProfile?.email || '',
     pin: '',
     confirmPin: '',
     role: 'user',
@@ -301,6 +303,18 @@ const RegisterSimple = () => {
           </div>
         </div>
 
+        {googleProfile ? (
+          <div className="mb-4 rounded-xl p-3 text-sm flex items-center gap-2" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3', color: 'var(--pr-ink)' }} data-testid="register-google-notice">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--pr-green)' }} />
+            <span>Google verified <b>{googleProfile.email}</b>. Add your mobile number and PIN to finish.</span>
+          </div>
+        ) : (
+          <>
+            <GoogleSignInButton label="Sign up with Google" testId="register-google-btn" />
+            <OrDivider />
+          </>
+        )}
+
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* General Error Banner */}
@@ -367,6 +381,7 @@ const RegisterSimple = () => {
                 type="email"
                 placeholder="your@email.com"
                 value={formData.email}
+                readOnly={!!googleProfile}
                 onChange={(e) => handleChange('email', e.target.value)}
                 className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 data-testid="register-email"

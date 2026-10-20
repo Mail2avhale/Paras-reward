@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import GoogleAuthCallback from "./components/GoogleAuthCallback";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import PopupMessage from "@/components/PopupMessage";
@@ -687,6 +688,15 @@ const PRCUsageHistory = lazy(() => import("@/pages/PRCUsageHistory"));
 
 import { API, BACKEND_URL } from "./lib/api";
 
+// Google sign-in return: session_id arrives in the URL fragment; must be read via useLocation (reactive)
+function GoogleAuthGate({ onLogin, children }) {
+  const location = useLocation();
+  if (location.hash?.includes('session_id=')) {
+    return <GoogleAuthCallback onLogin={onLogin} />;
+  }
+  return children;
+}
+
 function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser }) {
   const { toasts, removeToast } = useNotification();
 
@@ -736,6 +746,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             (see prior fork's investigation). Only rewarded interstitials
             remain, which the user explicitly asked to keep. */}
         <Suspense fallback={<LoadingFallback />}>
+          <GoogleAuthGate onLogin={handleLogin}>
           <Routes>
             <Route path="/" element={
               user
@@ -1052,6 +1063,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
             <Route path="/manager/*" element={<Navigate to="/admin" replace />} />
             {/* All stockist routes removed - using direct delivery partner model */}
           </Routes>
+          </GoogleAuthGate>
         </Suspense>
         {/* Professional Navigation System - Only for regular users, not admin/manager roles */}
         {user && !['admin', 'sub_admin', 'manager'].includes(user.role) && (

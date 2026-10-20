@@ -21,6 +21,7 @@ import { scheduleSessionExpiryWarning, ensureSessionChannel } from '@/utils/sess
 import BiometricSetup from '@/components/BiometricSetup';
 import AnimatedFeedback from '@/components/AnimatedFeedback';
 import PinInput from '@/components/PinInput';
+import { GoogleSignInButton, OrDivider } from '@/components/GoogleSignInButton';
 import SEO, { SEOConfigs } from '@/components/SEO';
 import { getDeviceIdentity, getDeviceIdentitySync } from '@/utils/deviceIdentity';
 
@@ -687,6 +688,9 @@ const LoginNew = ({ onLogin }) => {
             )}
           </Button>
         </form>
+
+        <OrDivider />
+        <GoogleSignInButton testId="login-google-btn" />
 
         {/* Register Link */}
         <div className="mt-6 text-center border-t border-gray-200 pt-6">

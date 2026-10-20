@@ -1090,6 +1090,15 @@ async def login(request: Request):
         await record_login_attempt_db(db, identifier, False, real_ip)
         raise HTTPException(status_code=401, detail="PIN not set. Please contact Admin to reset your PIN.")
     
+    return await _complete_login(
+        user, data, identifier=identifier, device_id=device_id, ip_address=ip_address,
+        real_ip=real_ip, user_agent=user_agent,
+    )
+
+
+async def _complete_login(user: dict, data: dict, *, identifier: str, device_id, ip_address,
+                          real_ip: str, user_agent: str, login_type: str = "pin") -> dict:
+    """Post-credential login steps shared by PIN and Google sign-in (bans, device binding, session, JWT)."""
     if user.get("is_banned"):
         raise HTTPException(status_code=403, detail=f"Account suspended: {user.get('suspension_reason', 'Contact support')}")
 
@@ -1215,7 +1224,7 @@ async def login(request: Request):
                 "device_id": device_id or "unknown",
                 "user_agent": user_agent[:200] if user_agent else "unknown",
                 "device_info": parse_user_agent(user_agent) if user_agent else {},
-                "login_type": "pin",
+                "login_type": login_type,
                 "success": True,
             })
         except Exception as e:
@@ -1372,6 +1381,70 @@ async def login(request: Request):
         response_data["token_type"] = "bearer"
         response_data["expires_in"] = JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60
     
+    return response_data
+
+
+EMERGENT_SESSION_DATA_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+GOOGLE_LOGIN_BLOCKED_ROLES = {"admin", "sub_admin", "super_admin", "manager"}
+
+
+@router.post("/google/session")
+async def google_session_login(request: Request):
+    """Emergent-managed Google sign-in: verify session_id server-side, then issue the normal app login."""
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body.")
+    session_id = (data.get("session_id") or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing Google session. Please try again.")
+
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(EMERGENT_SESSION_DATA_URL, headers={"X-Session-ID": session_id})
+    except httpx.HTTPError as e:
+        logging.error(f"[GOOGLE LOGIN] session-data request failed: {e}")
+        raise HTTPException(status_code=502, detail="Google sign-in is temporarily unavailable. Please try again.")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Google sign-in expired or was cancelled. Please try again.")
+
+    profile = resp.json()
+    email = (profile.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Google did not share an email address. Please try again.")
+
+    user = await db.users.find_one(
+        {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if not user:
+        return {
+            "status": "register_required",
+            "email": email,
+            "name": profile.get("name") or "",
+            "picture": profile.get("picture"),
+        }
+    if (user.get("role") or "user") in GOOGLE_LOGIN_BLOCKED_ROLES:
+        raise HTTPException(
+            status_code=403,
+            detail="Google sign-in is for member accounts only. Please sign in with your PIN.",
+        )
+
+    await db.users.update_one(
+        {"uid": user["uid"]},
+        {"$set": {
+            "google_linked": True,
+            "google_email": email,
+            "google_picture": profile.get("picture"),
+            "google_last_login_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    real_ip = get_client_ip(request) or "unknown"
+    response_data = await _complete_login(
+        user, data, identifier=email, device_id=data.get("device_id"), ip_address=None,
+        real_ip=real_ip, user_agent=request.headers.get("user-agent", "unknown"), login_type="google",
+    )
+    response_data["status"] = "ok"
     return response_data
 
 
