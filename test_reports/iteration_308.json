@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only test of the reskinned /referrals (Refer & Earn) page. Tested with the Elite user 9970100782 (3 direct members) and the Explorer user 9000006864 (0 members) at 430x900 and 1920x800. An automated WCAG contrast scan checked every text node, and screenshots were taken while scrolling the full page (about 5340px). Page background is ivory rgb(255,249,232) and the 'Community Growth' header is green #075C3B. These all passed: overview cards, level-progression-card (current L3 tile is solid #246BCE with white text), monthly-cap-card, invite-friends-card (copy-referral-link-btn is blue, the clipboard holds the link, toast 'Referral link copied' appears), share-whatsapp and share-telegram (both open the correct share URLs in a popup), share-qr (modal opens, qr-close closes it), view-community-activity-btn (blue, goes to /referrals/live-feed, back returns to /referrals), community goal/milestone/health/power/analytics cards, share-banner, partner-position-badge, leadership-community-health-card, next-promotion-tracker, member rows, and the community empty state. The refresh button reloads 9 APIs. All 5 bottom-nav items route correctly. No console errors. The /dashboard wallet card is still charcoal. Three real readability bugs remain (see action_items). enter-referral-card could not be checked visually because both test users already have a referrer.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "already-referred-card (ReferralsEnhanced.js ~line 372)", "issue": "'Referred by' label uses text-white/90. The global .text-white override does not cover /90 opacity variants, so white text sits on the ivory card (contrast 1.05) and is invisible. Seen for both users.", "selector": "[data-testid='already-referred-card'] .text-white\\/90", "priority": "HIGH"},
+      {"component": "Community Tree root node count badge (ReferralsEnhanced.js ~line 1129; also ~line 1272 tree-node count)", "issue": "The badge uses 'bg-black/30 text-white/80'. .pr-light-scope remaps bg-black/30 to pale blue #EDF4FF but leaves the text white/80, so the member count next to 'YOU' is invisible (contrast 1.08).", "selector": "[data-testid='tree-root-node'] span.bg-black\\/30", "priority": "HIGH"},
+      {"component": "Live ticker strip (global component, shown on /referrals and /dashboard)", "issue": "User names and masked phones (e.g. 'Rahul', '99******01', 'SANTOSH A.') use text-white. The global override turns this into #263238 on the charcoal rgb(38,38,38) strip, giving contrast 1.15, so the names are unreadable. The text-white/20 separators are also very faint.", "selector": "[data-testid='live-ticker-item'] .text-white, [data-testid='live-ticker-leader-item'] .text-white", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/referrals", "issues": [
+        "direct-referrals-list header count badge: text-blue-400 on bg-blue-500/20 (contrast 1.92). Should map to #246BCE.",
+        "leadership-community-health-card 'Health' tile: 9px text-indigo-400 label on a lavender tile (contrast 2.91). The tile itself is off-palette lavender.",
+        "share-banner 'GROW TOGETHER' eyebrow: gold #D6A638 on teal (contrast 2.93, 11px). The banner gradient also runs green to blue, not all green as the brief asks.",
+        "community-empty-state 'Share Now' button uses a blue-to-orange gradient, not the brand blue (.btn-pr-primary).",
+        "Header refresh button has no data-testid.",
+        "Desktop 1920x800: the fixed live ticker strip partly covers the bottom-nav icons."
+      ]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iter308_contrast.js"],
+  "action_items": [
+    "ReferralsEnhanced.js already-referred-card: change 'text-white/90' to a dark/ink class, or add .pr-light-scope overrides for .text-white\\/90, \\/80, \\/75, \\/70 and similar.",
+    "ReferralsEnhanced.js tree count badges (tree-root-node, ~1129 and ~1272): use dark text, or add a .pr-light-scope .bg-black\\/30 .text-white\\/80 override so the count is visible on the pale-blue chip.",
+    "Live ticker component: add .pr-dark-scope or .pr-on-solid to the strip so text-white names stay light on the charcoal background.",
+    "Minor: remap text-blue-400 and text-indigo-400 inside .pr-light-scope to #246BCE/#5B3FB8. Make the share-banner gradient all green. Use btn-pr-primary for the empty-state Share Now. Add data-testid='refresh-button'."
+  ],
+  "critical_code_review_comments": [
+    "The global .text-white override in index.css (line 85) only covers .text-white, not the opacity variants (/90, /80, /75, /55, /30). Any white-alpha text on light surfaces stays white and becomes invisible. In dark components it turns dark on dark (live ticker). Covering the variants in .pr-light-scope, and adding .pr-dark-scope to the remaining dark widgets, would fix this whole class of bug.",
+    "ReferralsEnhanced.js (1321 lines) and CommunityDashboard.js are both over 700 lines. Consider splitting them."
+  ],
+  "updated_files": ["/app/test_reports/iter308_contrast.js (test helper only)"],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "90% - all functional flows pass; 3 readability bugs, 6 minor design issues"},
+  "test_credentials": "Elite 9970100782 / 997010; Explorer 9000006864 / 900006 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Contrast scanner: page.evaluate(open('/app/test_reports/iter308_contrast.js').read()) returns text nodes with contrast below 3, scoped to [data-testid=referrals-page] (falls back to body). The community-power-percent hits are false positives (bg-clip-text gradient, visually fine). Login is 2-step (login-identifier-input -> login-submit-btn -> type PIN into [data-testid^=login-pin]). Do not use force-click on nav-referrals right after login; wait for the dashboard to settle. Neither test user can show enter-referral-card (both already referred); a fresh user signed up within the last 30 days is needed. The live-feed page shows an ad interstitial ('Congrats! Watch a short ad').",
+  "rca of the issue": "The light reskin depends on global Tailwind overrides (.text-white -> #263238, .bg-black/30 -> pale) plus .pr-light-scope remaps. The opacity variants of text-white are not remapped, so they stay white on ivory or pale chips. Meanwhile plain .text-white is forced dark everywhere, including widgets that keep a charcoal background (live ticker), which gives dark-on-dark text."
+}

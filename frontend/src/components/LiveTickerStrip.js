@@ -140,8 +140,8 @@ const LiveTickerStrip = () => {
       data-testid="live-ticker-strip"
       className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none"
     >
-      <div className="pointer-events-auto mx-auto max-w-3xl mb-[76px] sm:mb-0 px-2 sm:px-4">
-        <div className="bg-black/85 backdrop-blur-sm border border-emerald-500/20 rounded-t-xl sm:rounded-xl shadow-lg overflow-hidden">
+      <div className="pr-dark-scope pointer-events-auto mx-auto max-w-xl mb-[76px] px-2 sm:px-4">
+        <div className="backdrop-blur-sm border rounded-t-xl shadow-lg overflow-hidden" style={{ background: 'rgba(32, 37, 45, 0.96)', borderColor: '#353C47' }}>
           <div className="flex items-center gap-2 px-3 py-2 h-[42px]">
             {/* LIVE badge */}
             <div className="flex items-center gap-1.5 flex-shrink-0">

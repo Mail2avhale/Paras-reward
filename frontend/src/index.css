@@ -238,13 +238,17 @@
 .pr-light-scope .bg-black\/30, .pr-light-scope .bg-black\/40 { background-color: var(--pr-pale) !important; }
 .pr-light-scope .border-white\/5, .pr-light-scope .border-white\/10, .pr-light-scope .border-white\/20 { border-color: var(--pr-line) !important; }
 .pr-light-scope .ring-white\/10 { --tw-ring-color: var(--pr-line) !important; }
+.pr-light-scope .text-white\/70, .pr-light-scope .text-white\/80, .pr-light-scope .text-white\/90 { color: var(--pr-ink) !important; }
+.pr-light-scope .text-blue-400 { color: var(--pr-blue) !important; }
+.pr-light-scope .text-indigo-400 { color: #5B3FB8 !important; }
 .pr-light-scope .bg-gradient-to-br > svg.text-white, .pr-light-scope .bg-gradient-to-r > svg.text-white { color: #FFFFFF !important; }
 
 .pr-on-solid, .pr-on-solid * { color: #FFFFFF !important; }
 
 /* Dark surfaces (wallet card, recharge form, bottom nav): undo the light-theme text remaps */
 .pr-dark-scope { color: #F3F5F8; }
-.pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80,
+.pr-dark-scope .text-white\/20, .pr-dark-scope .text-white\/30 { color: #6B7582 !important; }
+.pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80, .pr-dark-scope .text-white\/90,
 .pr-dark-scope .text-gray-50, .pr-dark-scope .text-gray-100, .pr-dark-scope .text-gray-200,
 .pr-dark-scope .text-slate-50, .pr-dark-scope .text-slate-100, .pr-dark-scope .text-slate-200,
 .pr-dark-scope .text-neutral-50, .pr-dark-scope .text-neutral-100 { color: #F3F5F8 !important; }

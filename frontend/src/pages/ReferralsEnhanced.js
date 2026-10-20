@@ -273,6 +273,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             onClick={fetchData}
             disabled={refreshing}
             className="p-2 rounded-full hover:bg-gray-800"
+            data-testid="referrals-refresh-btn"
           >
             <RefreshCw className={`w-5 h-5 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -628,7 +629,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 }
                 try { await navigator.clipboard.writeText(referralLink); toast.success('Link copied — share with friends!'); } catch { toast.error('Copy failed'); }
               }}
-              className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-black font-bold shadow-lg hover:scale-[1.02] transition"
+              className="btn-pr-primary mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold"
               data-testid="community-empty-share-btn"
             >
               <Share2 className="w-4 h-4" /> Share Now
@@ -793,8 +794,8 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   {partnerPosition.community_health.inactive_count}
                 </p>
               </div>
-              <div className="bg-indigo-900/30 border border-indigo-800/40 rounded-lg py-2 px-2 text-center">
-                <p className="text-[9px] text-indigo-400 uppercase tracking-wider">Health</p>
+              <div className="rounded-lg py-2 px-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}>
+                <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--pr-blue)' }}>Health</p>
                 <p className="text-indigo-300 font-bold text-lg tabular-nums" data-testid="ch-health-pct">
                   {partnerPosition.community_health.health_pct}%
                 </p>

@@ -573,13 +573,13 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
       {/* ============ SECTION 17: SHARE BANNER ============ */}
       <div
         className="pr-dark-scope relative overflow-hidden rounded-2xl p-5 text-center cursor-pointer transition-transform hover:scale-[1.01]"
-        style={{ background: 'linear-gradient(135deg, #075C3B 0%, #0B6E47 60%, #246BCE 100%)', boxShadow: '0 10px 30px -14px rgba(7, 92, 59, 0.6)' }}
+        style={{ background: 'linear-gradient(135deg, #064D32 0%, #075C3B 55%, #0A6A45 100%)', boxShadow: '0 10px 30px -14px rgba(7, 92, 59, 0.6)' }}
         onClick={async () => { const ok = await share.native(); if (!ok) copyLink(); }}
         data-testid="share-banner"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.25),transparent_60%)]" />
         <div className="relative">
-          <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--pr-gold)' }}>Grow Together</p>
+          <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: '#F2D27A' }}>Grow Together</p>
           <h4 className="text-white text-xl font-black mt-1">Build Community • Unlock Rewards</h4>
           <button
             className="mt-3 inline-flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm transition-transform active:scale-95" style={{ background: 'var(--pr-gold)', color: 'var(--pr-charcoal)' }}

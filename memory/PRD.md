@@ -1,3 +1,10 @@
+## Shipped (Oct 2026 — Pastel Refer & Earn Page)
+- /referrals (ReferralsEnhanced + CommunityDashboard) moved to ivory/green. GlassCard now uses `.pr-card`. The new `.pr-light-scope` remaps pale accent text and translucent surfaces; `.pr-on-solid` sets white text on solid tiles.
+- Brand-blue primary buttons (Copy, View Live Activity, empty-state Share Now). Green share banner with a gold CTA. Green enter-referral card. Leadership, health and promotion cards are now white or pale blue.
+- LiveTickerStrip is charcoal with readable text and no longer covers the bottom nav on desktop.
+- Test: iteration_308 (all flows pass). The 3 readability bugs and 6 design nits it found were fixed afterwards and checked with screenshots.
+
+
 ## Shipped (Oct 2026 — Dashboard Brand Palette Refresh, UI only)
 - Brand tokens in index.css: `--pr-green #075C3B`, `--pr-blue #246BCE`, `--pr-gold #D6A638`, `--pr-ivory #FFF9E8`, `--pr-pale #EDF4FF`, `--pr-charcoal #20252D`, `--pr-ink #263238`. The legacy `--paras-*` tokens now map to these.
 - New shared classes: `.btn-pr-primary` (one Royal Blue primary button), `.pr-btn-disabled`, `.pr-card`, and `.pr-dark-scope`, which restores light text inside dark surfaces.
