@@ -226,9 +226,14 @@
 
 /* Dark surfaces (wallet card, recharge form, bottom nav): undo the light-theme text remaps */
 .pr-dark-scope { color: #F3F5F8; }
-.pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80 { color: #F3F5F8 !important; }
-.pr-dark-scope .text-gray-300, .pr-dark-scope .text-gray-400 { color: #B4BDC9 !important; }
-.pr-dark-scope .text-gray-500, .pr-dark-scope .text-gray-600, .pr-dark-scope .text-zinc-500 { color: #98A2B0 !important; }
+.pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80,
+.pr-dark-scope .text-gray-50, .pr-dark-scope .text-gray-100, .pr-dark-scope .text-gray-200,
+.pr-dark-scope .text-slate-50, .pr-dark-scope .text-slate-100, .pr-dark-scope .text-slate-200,
+.pr-dark-scope .text-neutral-50, .pr-dark-scope .text-neutral-100 { color: #F3F5F8 !important; }
+.pr-dark-scope .text-gray-300, .pr-dark-scope .text-gray-400, .pr-dark-scope .text-slate-300, .pr-dark-scope .text-slate-400,
+.pr-dark-scope .text-neutral-300, .pr-dark-scope .text-neutral-400, .pr-dark-scope .text-zinc-400 { color: #B4BDC9 !important; }
+.pr-dark-scope .text-gray-500, .pr-dark-scope .text-gray-600, .pr-dark-scope .text-zinc-500,
+.pr-dark-scope .text-slate-500, .pr-dark-scope .text-neutral-500 { color: #98A2B0 !important; }
 .pr-dark-scope .text-emerald-400, .pr-dark-scope .text-emerald-500, .pr-dark-scope .text-green-400 { color: #4CC38A !important; }
 .pr-dark-scope .text-amber-400, .pr-dark-scope .text-yellow-400 { color: #D6A638 !important; }
 .pr-dark-scope .text-blue-400 { color: #7FB0F5 !important; }

@@ -248,14 +248,14 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="pr-dark-scope min-h-screen bg-[#0a0a0f] flex items-center justify-center">
         <RewardLoader message="Loading referrals..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] pb-24">
+    <div className="pr-dark-scope min-h-screen bg-[#0a0a0f] pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-b border-gray-800/50 z-10">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">

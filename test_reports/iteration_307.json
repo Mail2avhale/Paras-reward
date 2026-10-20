@@ -1,0 +1,55 @@
+{
+  "summary": "Frontend-only UI test of the PARAS REWARD dashboard reskin (Elite user 9970100782 -> uid 76b75808, plus Explorer user 9000006864) at mobile 430x900 and desktop 1920x800. Every dashboard item in the brief passed: wallet card, mining widget, collect eligibility, start/cooldown button, Pay to Partner Store card, Redeem Limit card visible/hidden by plan, Quick Recharge, Profile Completion, bottom nav, and /bank-redeem. No console errors. A spot check of other pages found unreadable dark-on-dark text on the /profile hero and on /referrals (Community Growth). This comes from the global .text-white override.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "Login for user 8888800001 (uid pstore-100001, a seeded partner-store user) returns 'Login service temporarily unavailable'. Backend log: \"[LOGIN DEBUG] User lookup ERROR ... 'NoneType' object has no attribute 'lower'\". A field on that user record is probably None. Outside this task's scope; I used a different Explorer user."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Dashboard Redeem Limit card vs Recharge/Bank Redeem", "issue": "For the Elite user, the dashboard card (legacy GET /api/user/{uid}/redeem-limit) shows TOTAL 0.00 PRC, USED - 1,33,117.78 PRC, REMAINING 0 PRC, 0.00% Unlocked. On the same page, Quick Recharge (GET /api/redemption-limit/status) shows 'Remaining Redeem Limit: 8,610 PRC', and /bank-redeem shows 8,610 PRC. This follows the user's choice to keep the legacy API, but users see contradictory numbers on one screen. Flag it to the user.", "affected_selectors": ["dashboard-redeem-remaining", "recharge-limit-remaining"]}
+    ],
+    "design_issues": [
+      {"screen": "/profile hero card", "issues": ["The user name (h-tag with class text-white) renders rgb(38,50,56) on a dark navy gradient (#1a1a2e -> #0f0f23), so it is almost invisible. Cause: global .text-white -> #263238 !important in index.css. Fix: add the pr-dark-scope class to that hero container."]},
+      {"screen": "/referrals (Community Growth)", "issues": ["The page background is dark, but 'Level Progression', the stat numbers (Direct Members / Community Size = 3), the header title and the locked L4-L10 tiles render dark grey/ink on near-black, which is very low contrast. Same root cause (text-white and text-gray-400 remapped for light theme). Fix: wrap the page root in pr-dark-scope or move the page to the light palette."]},
+      {"screen": "/mall", "issues": ["Probably pre-existing; ParasMall files were not touched. .mall-root is position:fixed with z-index 9999 and covers the bottom nav (by design, there is a back button). The hero (mall-hero-grid, absolute) overlaps the product card and the 'Washing Machine' text overlaps the PARAS MALL title at 430px width."]},
+      {"screen": "Dashboard (paid user)", "issues": ["The 'Service Fee Pending' banner sits over the app header, so the logo, language and bell row is hidden and a blank strip shows below the banner.", "The persistent 'complete your profile' toast and the LIVE ticker stack above the bottom nav and cover about 120px of content on mobile."]}
+    ]
+  },
+  "verified_passing": [
+    "Desktop 1920: dashboard-root is 576px wide and centered (left 672). Ancestor background is Ivory rgb(255,249,232). Mobile layout is fine.",
+    "Wallet card is charcoal. PRC balance is blue (#3D82E0), 20261.97, which matches GET /api/users/{uid} prc_balance 20261.972162. Plan badge is gold #D6A638. Card holder and reward rate are readable (green #4CC38A).",
+    "Timer cells are white with dark numerals #263238. Session earnings card is pale blue #EDF4FF. Earnings rose from 346.05 to 346.14 over 10s. PRC/SEC, PRC/HOUR and the progress bar are visible.",
+    "Elite user: collect-rewards-btn is enabled and blue rgb(36,107,206) ('Collect Rewards (346.05 PRC)'). Not clicked.",
+    "Explorer user: upgrade-to-collect-box is shown. collect-disabled-btn is disabled, grey #E9ECF1, dashed border, cursor not-allowed, and Playwright confirms it cannot be clicked. No collect-rewards-btn is shown.",
+    "start-mining-btn: idle state is blue with white text. Cooldown state (simulated through a mocked mining/status start_cooldown_seconds) is grey, dashed and disabled, labelled 'Start Session in 40s'.",
+    "dashboard-pay-partner-store-btn is pale blue with a green left border and navigates to /pay-partner-store.",
+    "Redeem Limit card shows for the Elite user and is hidden for the Explorer user. Values match the legacy API: total_limit 0, total_redeemed 133117.78 shown as '- 1,33,117.78 PRC' (a display prefix only), effective_available 0.",
+    "Recharge card is charcoal. Inputs show light text (#F3F5F8) and placeholders #8E99A8. The active toggle (Mobile or DTH) turns blue. Submit is dashed grey and disabled until the form is valid, then blue. Typing 600 in amount is capped at 60. A 5-digit number shows the toast 'Enter a valid 10-digit mobile number' and sends no recharge POST. recharge-limit-remaining is visible.",
+    "Profile completion card is pale blue, the ring gradient goes #075C3B -> #D6A638, the percent is green, and Complete goes to /profile?edit=true.",
+    "Bottom nav is charcoal rgb(32,37,45). The active label is gold and inactive labels are #8A94A3. nav-home, nav-referrals, nav-mall, nav-community and nav-profile reach /dashboard, /referrals, /mall, /community and /profile (when starting from a non-mall page).",
+    "/bank-redeem shows the progressive limit card (progressive-total-limit 8,610 PRC) and bank-redeem-amount-chips."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Add the pr-dark-scope class (or switch to light surfaces) on the /profile hero card and the /referrals Community Growth page; text there is currently dark-on-dark.",
+    "Optional, needs the user's OK: the dashboard Redeem Limit card (legacy API: 0 remaining) contradicts the Recharge/Bank Redeem remaining (8,610 PRC) for the same user.",
+    "Optional: stop the Service Fee banner from hiding the header row on the dashboard."
+  ],
+  "critical_code_review_comments": [
+    "index.css global remaps (.text-white -> #263238 !important, .text-gray-400 -> #4B5563) make text unreadable on any dark container that lacks pr-dark-scope. Audit the remaining dark gradient containers (Profile hero, Referrals, the Mall dark cards).",
+    "DashboardModern Redeem card: `effective_available || available || 0` falls back to `available` when effective_available is a legitimate 0. Use ?? instead.",
+    "Redeem card visibility requires stats.subscriptionPlan to be truthy. If the plan is missing or empty, the card is hidden for paid users too.",
+    "RechargeCard isFormValid does not check for a 10-digit mobile number, so the button turns blue for 5 digits and the error only appears as a toast on click. Consider inline validation.",
+    "DashboardModern.js (1168 lines) is over the 700-line guideline; RechargeCard.js is 719."
+  ],
+  "updated_files": ["/app/memory/test_credentials.md"],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of requested dashboard checks; 2 regression spot-check pages have contrast issues"},
+  "seed_data_creation": "Set PIN 900006 on Explorer preview user edc80e3f-22ff-469b-b3cf-f7f0212e605b (mobile 9000006864) and started a mining session for it. Also overwrote the PIN hash of pstore-100001 (8888800001) with 888801 before finding that its login fails for an unrelated reason; its original hash is gone.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Elite: 9970100782 / 997010 (uid 76b75808-...). Explorer: 9000006864 / 900006. Recorded in /app/memory/test_credentials.md.",
+  "context_for_next_testing_agent": "Login is 2-step: login-identifier-input -> login-submit-btn -> type the PIN into [data-testid^=login-pin]; it auto-submits. /mall is a fixed z-9999 overlay, so bottom-nav clicks from /mall are blocked by design. Cooldown state can be simulated by routing **/api/mining/status/** and setting start_cooldown_seconds. Do not click collect for the Elite user (forced ad flow)."
+}

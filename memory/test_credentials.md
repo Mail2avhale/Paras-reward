@@ -34,3 +34,12 @@
 - Production URL: https://parasreward.com
 - Preview backend: use `REACT_APP_BACKEND_URL` from `/app/frontend/.env`
 - Password reset admin PIN auto-restored after pytest test suite runs
+
+## Explorer (free) preview test user (UI testing)
+- **Mobile**: 9000006864
+- **PIN**: 900006
+- **UID**: edc80e3f-22ff-469b-b3cf-f7f0212e605b
+- subscription_plan: explorer (PIN set by testing agent, iteration 307)
+
+## Paid Elite preview test user
+- **Identifier**: 9970100782 / PIN 997010 -> resolves to uid 76b75808-47fa-48dd-ad7c-8074678e3607 (phone field), elite

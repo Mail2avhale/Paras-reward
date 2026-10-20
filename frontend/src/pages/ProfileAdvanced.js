@@ -599,7 +599,7 @@ const ProfileAdvanced = ({ user, onLogout }) => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl p-6 text-center"
+          className="pr-dark-scope relative overflow-hidden rounded-3xl p-6 text-center"
           style={{
             background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
           }}

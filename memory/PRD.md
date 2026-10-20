@@ -1,3 +1,13 @@
+## Shipped (Oct 2026 — Dashboard Brand Palette Refresh, UI only)
+- Brand tokens in index.css: `--pr-green #075C3B`, `--pr-blue #246BCE`, `--pr-gold #D6A638`, `--pr-ivory #FFF9E8`, `--pr-pale #EDF4FF`, `--pr-charcoal #20252D`, `--pr-ink #263238`. The legacy `--paras-*` tokens now map to these.
+- New shared classes: `.btn-pr-primary` (one Royal Blue primary button), `.pr-btn-disabled`, `.pr-card`, and `.pr-dark-scope`, which restores light text inside dark surfaces.
+- Dashboard: content centered at max-w-xl on desktop. Charcoal wallet card with a blue balance and gold badge. Pale-blue session earnings. Gold upgrade box with a clearly disabled button. Pale-blue/green Partner Store card. Redeem Limit card restyled and hidden for Explorer (data still from the legacy `/user/{uid}/redeem-limit`, as the user chose). Charcoal Quick Recharge form. Pale-blue profile ring card (green to gold, no pink). Charcoal bottom nav with gold active item.
+- Contrast fixes on the /referrals page and the /profile hero via pr-dark-scope.
+- Data audit: Reward Rate 0%, the Explorer badge, the upgrade prompt and the 45% profile (name + mobile only) are expected. "USED - X" is a display prefix on total_redeemed, not a negative value.
+- Test: iteration_307 passed 100% of dashboard checks.
+- Open: the dashboard Redeem Limit card (legacy) and Recharge/Bank (progressive) show different numbers. The /mall hero overlaps at 430px. The Service Fee banner covers the header.
+
+
 ## Shipped (Oct 2026 — Dashboard Contrast Fix)
 - MiningWidget: timer and session-earnings digit cells changed to white with navy/blue numerals (they were invisible white-on-pastel before).
 - Dashboard: CARD HOLDER, REWARD POINTS and REWARD RATE labels are now light text on the dark wallet card. The subscription plan card and the Pay to Partner Store banner moved to the pastel style with readable dark text.
