@@ -246,6 +246,17 @@ const TermsConditions = () => {
                     <li>Your subscription/membership expires and is not renewed</li>
                     <li>As specified in promotional terms</li>
                   </ul>
+
+                  <h3 className="text-lg font-semibold text-white mt-6" id="session-prc-eligibility" data-testid="terms-section-4-5">4.5 Session-Based PRC Eligibility</h3>
+                  <p>
+                    PRC points collected through eligible reward sessions shall become eligible for redemption and other permitted uses under the Paras Reward platform only after completion of one (1) year from the date on which such PRC points are credited to the User&apos;s account.
+                  </p>
+                  <p>
+                    Each session-based PRC credit shall have its own one-year eligibility period, calculated separately from its respective credit date.
+                  </p>
+                  <p>
+                    The one-year period specified in this clause is an eligibility waiting period and does not, by itself, mean that the PRC points expire after one year. Upon completion of this period, the eligible PRC points may be used through the redemption facilities available on the platform, subject to the applicable redemption rules, eligibility requirements and applicable laws.
+                  </p>
                 </div>
               </section>
 
