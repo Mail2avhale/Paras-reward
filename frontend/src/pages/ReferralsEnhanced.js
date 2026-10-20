@@ -248,16 +248,16 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
 
   if (loading) {
     return (
-      <div className="pr-dark-scope min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="pr-light-scope min-h-screen flex items-center justify-center">
         <RewardLoader message="Loading referrals..." />
       </div>
     );
   }
 
   return (
-    <div className="pr-dark-scope min-h-screen bg-[#0a0a0f] pb-24">
+    <div className="pr-light-scope min-h-screen pb-24" data-testid="referrals-page">
       {/* Header */}
-      <div className="sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-b border-gray-800/50 z-10">
+      <div className="sticky top-0 backdrop-blur-lg border-b z-10" style={{ background: 'rgba(255, 249, 232, 0.95)', borderColor: 'var(--pr-line)' }}>
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -267,7 +267,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             >
               <ArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Community Growth</h1>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--pr-green)' }}>Community Growth</h1>
           </div>
           <button
             onClick={fetchData}
@@ -305,7 +305,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             referrer yet. Sits right below the user's own Referral Link card
             so the symmetry is obvious: "share yours / enter someone else's". */}
         {canClaimReferrer && (
-          <div className="bg-gradient-to-br from-violet-600/90 to-fuchsia-600/85 rounded-2xl p-5 shadow-lg" data-testid="enter-referral-card">
+          <div className="pr-dark-scope rounded-2xl p-5 shadow-lg" style={{ background: 'var(--pr-green)' }} data-testid="enter-referral-card">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
                 <Gift className="w-5 h-5 text-white" />
@@ -327,7 +327,8 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               spellCheck="false"
               data-testid="claim-code-input"
               disabled={submittingClaim}
-              className="w-full bg-black/30 border border-white/15 rounded-xl px-4 py-3 text-white font-mono text-base tracking-wider focus:outline-none focus:border-white/50 transition placeholder:text-white/30 disabled:opacity-60"
+              style={{ background: 'rgba(0, 0, 0, 0.22)' }}
+              className="w-full border border-white/15 rounded-xl px-4 py-3 text-white font-mono text-base tracking-wider focus:outline-none focus:border-white/50 transition placeholder:text-white/30 disabled:opacity-60"
             />
 
             {/* Live lookup feedback */}
@@ -432,7 +433,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             fallback for users where the dashboard fetch failed. */}
         {!communityData && commissionConfig && commissionConfig.enabled && commissionConfig.tiers?.length > 0 && (
           <div
-            className="bg-gradient-to-br from-fuchsia-900/40 to-purple-900/40 border border-fuchsia-500/30 rounded-2xl p-5"
+            className="pr-card p-5"
             data-testid="elite-mining-commission-card"
           >
             <div className="flex items-center justify-between mb-3">
@@ -464,7 +465,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               {commissionConfig.tiers.map((t) => (
                 <div
                   key={t.tier}
-                  className="bg-black/40 border border-fuchsia-500/20 rounded-lg p-2 text-center"
+                  className="rounded-lg p-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}
                   data-testid={`commission-tier-${t.tier}`}
                 >
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider">
@@ -585,7 +586,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               </>
             )}
 
-            <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-3 text-[11px] text-gray-400 leading-relaxed">
+            <div className="rounded-xl p-3 text-[11px] leading-relaxed" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3', color: '#5B6670' }}>
               💡 Each <strong className="text-emerald-400">Active</strong> network member contributes
               <span className="text-emerald-400 font-bold"> +2% </span>
               to your daily mining boost (capped at +100% per level).
@@ -612,7 +613,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         {/* Empty state — shown when the user has 0 community members.
             Encourages an immediate share action. */}
         {directReferrals.length === 0 && !loading && (
-          <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-8 text-center" data-testid="community-empty-state">
+          <div className="pr-card p-8 text-center" data-testid="community-empty-state">
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-[0_0_40px_-8px_rgba(251,191,36,0.6)]">
               <Users className="w-10 h-10 text-white" />
             </div>
@@ -638,7 +639,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         {/* Partner Position Badge (Feb 6 2026) */}
         {partnerPosition && (
           <div
-            className="bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-slate-900/60 border border-indigo-500/30 rounded-2xl p-5"
+            className="pr-card p-5" style={{ borderTop: '4px solid var(--pr-gold)' }}
             data-testid="partner-position-badge"
           >
             <div className="flex items-center gap-3 mb-3">
@@ -691,7 +692,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             {/* Per-level breakdown */}
             <div className="grid grid-cols-4 md:grid-cols-7 gap-1.5 mb-3">
               {partnerPosition.per_level_counts?.map((lvl) => (
-                <div key={lvl.level} className="bg-slate-800/60 rounded-lg py-2 text-center">
+                <div key={lvl.level} className="bg-[#F4F7FB] rounded-lg py-2 text-center">
                   <p className="text-[9px] text-slate-500 uppercase">L{lvl.level}</p>
                   <p className="text-white font-bold text-sm tabular-nums">{lvl.count}</p>
                 </div>
@@ -756,7 +757,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
         {/* Community Health (Phase C — Feb 2026) */}
         {partnerPosition && partnerPosition.community_health && (
           <div
-            className="bg-gradient-to-br from-slate-900/60 to-slate-950/60 border border-slate-700 rounded-2xl p-5"
+            className="pr-card p-5"
             data-testid="leadership-community-health-card"
           >
             <div className="flex items-center justify-between mb-3">
@@ -786,7 +787,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   {partnerPosition.community_health.active_count}
                 </p>
               </div>
-              <div className="bg-slate-800/60 border border-slate-700 rounded-lg py-2 px-2 text-center">
+              <div className="bg-[#F4F7FB] border border-[#E7E0CC] rounded-lg py-2 px-2 text-center">
                 <p className="text-[9px] text-slate-400 uppercase tracking-wider">Inactive</p>
                 <p className="text-slate-300 font-bold text-lg tabular-nums" data-testid="ch-inactive-count">
                   {partnerPosition.community_health.inactive_count}
@@ -824,8 +825,8 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
           <div
             className={`rounded-2xl p-5 border ${
               partnerPosition.next_promotion.ready
-                ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/30 border-emerald-500/40'
-                : 'bg-gradient-to-br from-purple-900/40 to-fuchsia-900/30 border-purple-500/40'
+                ? 'bg-[#ECF6F0] border-[#075C3B]/40'
+                : 'bg-[#EDF4FF] border-[#C7D9F3]'
             }`}
             data-testid="next-promotion-tracker"
           >
@@ -840,7 +841,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                 className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
                   partnerPosition.next_promotion.ready
                     ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40'
-                    : 'bg-slate-800/60 text-slate-300 border border-slate-700'
+                    : 'bg-[#F4F7FB] text-slate-300 border border-[#E7E0CC]'
                 }`}
               >
                 {partnerPosition.next_promotion.ready ? 'Ready ✨' : `${partnerPosition.next_promotion.progress_pct}%`}

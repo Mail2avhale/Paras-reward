@@ -52,7 +52,7 @@ const Counter = ({ value = 0, duration = 900, decimals = 0, className = '' }) =>
 const GlassCard = ({ className = '', children, testId }) => (
   <div
     data-testid={testId}
-    className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] backdrop-blur-md shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)] ${className}`}
+    className={`pr-card relative overflow-hidden ${className}`}
   >
     {children}
   </div>
@@ -174,7 +174,7 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
 
       {/* ============ SECTION 1: HEADER ============ */}
       <div className="text-center pt-1 pb-2" data-testid="community-header">
-        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-amber-300 via-orange-300 to-pink-300 bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--pr-green)' }}>
           Community Growth
         </h1>
         <p className="text-gray-400 text-xs sm:text-sm mt-1 tracking-wide">
@@ -241,7 +241,7 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
           </div>
           <button
             onClick={copyLink}
-            className="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs flex items-center gap-1.5 transition"
+            className="btn-pr-primary px-3 py-2 rounded-lg font-semibold text-xs flex items-center gap-1.5"
             data-testid="copy-referral-link-btn"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -290,7 +290,7 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
           kept as a slim standalone action to preserve navigation.  */}
       <button
         onClick={onOpenLiveFeed}
-        className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:opacity-90 text-white font-semibold text-sm flex items-center justify-center gap-2 transition shadow-lg shadow-fuchsia-500/20"
+        className="btn-pr-primary w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         data-testid="view-community-activity-btn"
       >
         <Activity className="w-4 h-4" />
@@ -572,16 +572,17 @@ export default function CommunityDashboard({ data, user, onOpenLiveFeed }) {
 
       {/* ============ SECTION 17: SHARE BANNER ============ */}
       <div
-        className="relative overflow-hidden rounded-2xl p-5 text-center bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 shadow-[0_10px_40px_-12px_rgba(251,113,133,0.5)] cursor-pointer transition hover:scale-[1.01]"
+        className="pr-dark-scope relative overflow-hidden rounded-2xl p-5 text-center cursor-pointer transition-transform hover:scale-[1.01]"
+        style={{ background: 'linear-gradient(135deg, #075C3B 0%, #0B6E47 60%, #246BCE 100%)', boxShadow: '0 10px 30px -14px rgba(7, 92, 59, 0.6)' }}
         onClick={async () => { const ok = await share.native(); if (!ok) copyLink(); }}
         data-testid="share-banner"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.25),transparent_60%)]" />
         <div className="relative">
-          <p className="text-black/70 text-[11px] uppercase tracking-widest font-bold">Grow Together</p>
+          <p className="text-[11px] uppercase tracking-widest font-bold" style={{ color: 'var(--pr-gold)' }}>Grow Together</p>
           <h4 className="text-white text-xl font-black mt-1">Build Community • Unlock Rewards</h4>
           <button
-            className="mt-3 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-black/85 text-white font-semibold text-sm hover:bg-black transition"
+            className="mt-3 inline-flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-sm transition-transform active:scale-95" style={{ background: 'var(--pr-gold)', color: 'var(--pr-charcoal)' }}
             data-testid="share-banner-btn"
           >
             <Share2 className="w-4 h-4" /> Share Now
@@ -726,7 +727,7 @@ const LevelProgressionCard = ({ data, leaderStatus }) => {
           const base = 'rounded-lg px-1.5 py-2 text-center border transition';
           const state = unlocked
             ? (isCurrent
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 border-white/20 text-white shadow-lg shadow-purple-500/30'
+                ? 'pr-on-solid bg-[#246BCE] border-[#246BCE] shadow-lg'
                 : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100')
             : 'bg-white/5 border-white/10 text-gray-500';
           const boosted = isLeader && multiplier > 1 ? Number((lvl.percent * multiplier).toFixed(3)) : null;

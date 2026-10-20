@@ -224,6 +224,24 @@
   box-shadow: var(--paras-shadow-card);
 }
 
+/* Light pages originally designed dark (Refer & Earn): remap pale accent text + translucent surfaces */
+.pr-light-scope { background: var(--pr-ivory); color: var(--pr-ink); }
+.pr-light-scope .text-amber-100, .pr-light-scope .text-amber-200, .pr-light-scope .text-amber-300,
+.pr-light-scope .text-yellow-200, .pr-light-scope .text-yellow-300, .pr-light-scope .text-orange-200, .pr-light-scope .text-orange-300 { color: #9A7215 !important; }
+.pr-light-scope .text-emerald-100, .pr-light-scope .text-emerald-200, .pr-light-scope .text-emerald-200\/80, .pr-light-scope .text-emerald-300,
+.pr-light-scope .text-green-200, .pr-light-scope .text-green-300, .pr-light-scope .text-lime-300, .pr-light-scope .text-teal-300 { color: var(--pr-green) !important; }
+.pr-light-scope .text-rose-100, .pr-light-scope .text-rose-200, .pr-light-scope .text-rose-300, .pr-light-scope .text-red-300, .pr-light-scope .text-pink-300 { color: #B4234A !important; }
+.pr-light-scope .text-fuchsia-200, .pr-light-scope .text-fuchsia-300, .pr-light-scope .text-purple-300, .pr-light-scope .text-indigo-300 { color: #5B3FB8 !important; }
+.pr-light-scope .text-cyan-100, .pr-light-scope .text-cyan-300, .pr-light-scope .text-sky-200, .pr-light-scope .text-sky-300,
+.pr-light-scope .text-blue-100, .pr-light-scope .text-blue-300 { color: var(--pr-blue) !important; }
+.pr-light-scope .bg-white\/5, .pr-light-scope .bg-slate-500\/15 { background-color: #F4F7FB !important; }
+.pr-light-scope .bg-black\/30, .pr-light-scope .bg-black\/40 { background-color: var(--pr-pale) !important; }
+.pr-light-scope .border-white\/5, .pr-light-scope .border-white\/10, .pr-light-scope .border-white\/20 { border-color: var(--pr-line) !important; }
+.pr-light-scope .ring-white\/10 { --tw-ring-color: var(--pr-line) !important; }
+.pr-light-scope .bg-gradient-to-br > svg.text-white, .pr-light-scope .bg-gradient-to-r > svg.text-white { color: #FFFFFF !important; }
+
+.pr-on-solid, .pr-on-solid * { color: #FFFFFF !important; }
+
 /* Dark surfaces (wallet card, recharge form, bottom nav): undo the light-theme text remaps */
 .pr-dark-scope { color: #F3F5F8; }
 .pr-dark-scope .text-white, .pr-dark-scope .text-white\/70, .pr-dark-scope .text-white\/80,
