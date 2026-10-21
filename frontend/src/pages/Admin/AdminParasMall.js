@@ -256,7 +256,7 @@ const AdminParasMall = () => {
       return;
     }
     if (!window.confirm(
-      `Mark as DELIVERED?\n\nShipping to:\n${fullAddr}\n\nProduct: ${booking.product_name}\nBooking: ${booking.booking_id.slice(0, 8)}...\n\nA 20% service charge on MRP (${'\u20B9'}${(Number(booking.mrp_inr || 0) * 0.2).toFixed(2)}) will be raised to the user.`
+      `Mark as DELIVERED?\n\nShipping to:\n${fullAddr}\n\nProduct: ${booking.product_name}\nBooking: ${booking.booking_id.slice(0, 8)}...\n\nA redemption service charge on the product MRP (${'\u20B9'}${Number(booking.mrp_inr || 0)}) will be raised to the user.`
     )) return;
     try {
       const token = localStorage.getItem('token');
@@ -264,6 +264,7 @@ const AdminParasMall = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const svc = data?.service_charge;
+      if (data?.service_charge_warning) toast.warning(data.service_charge_warning);
       toast.success(svc
         ? `Marked delivered. ${'₹'}${Number(svc.service_charge_amount).toFixed(2)} service charge (20% of MRP) created for the user.`
         : 'Marked delivered + community post created');
@@ -323,8 +324,9 @@ const AdminParasMall = () => {
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-full text-sm font-semibold transition flex items-center gap-2 ${
-              tab === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'
+              tab === t ? '' : 'bg-white text-slate-600 border border-slate-200'
             }`}
+            style={tab === t ? { background: 'var(--pr-blue)', color: '#FFFFFF', border: '1px solid var(--pr-blue)' } : undefined}
             data-testid={`admin-mall-tab-${t}`}
           >
             {t === 'products'

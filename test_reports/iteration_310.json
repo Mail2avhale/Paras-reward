@@ -1,0 +1,35 @@
+{
+  "summary": "Tested the 20% Paras Mall delivery service charge (on MRP) end to end. Backend pytest: 8/8 passed. The mark-delivered endpoint creates a MALLDLV-{booking_id} charge (paras_mall_delivery, mrp basis, prc_amount 0, value = MRP 2500, 20%, amount 500, PENDING, details product_name/mrp_inr/booking_id/stage=delivery). The response includes service_charge {charge_id, amount, status}. A notification is created with action_url /my-service-charges and mentions the MRP. A second call returns 400 with no duplicate. Without auth it returns 401. A non-fulfilled booking returns 400. pending/{uid} returns has_pending=true. history returns details, and a legacy mall row with no details gets product_name and mrp_inr filled in from mall_bookings. Frontend /my-service-charges (mobile 390, user 9970100782): rows show the amount, the type chip ('Paras Mall Delivery', 'Paras Mall Booking', 'Qa Razorpay Loader') and 'View details'. Tapping a row expands Type/Product/Charged on/Service charge/Total/Status/Created/Reference/Charge ID: 'Product MRP ₹ 2500.00' for mrp basis, '1,000 PRC = ₹ 100.00' plus a Product MRP line for prc basis. Tapping again collapses it, and only one row is open at a time. Pay Now opens the Razorpay checkout (₹500, not paid). Admin /admin/mall Bookings > Mark Delivered: the confirm dialog mentions the '20% service charge on MRP (₹500.00)' and the toast says 'Marked delivered. ₹500.00 service charge (20% of MRP) created for the user.' The booking-time charge was checked by code review only (paras_mall.py ~795: paras_mall_booking, prc basis, details.product_name, stage=booking); no real booking was made, to avoid debiting PRC. All DB changes were restored.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/mall/bookings/{id}/mark-delivered", "issue": "Check-then-set race: it does find_one(status=='fulfilled') and then an update_one that does not filter on status. Two concurrent admin clicks can both pass, which duplicates the community_feed and community_posts entries. The charge itself is protected by the unique index on redemption_id. Suggested fix: update_one({booking_id, status:'fulfilled'}, ...) and return 400 if modified_count == 0."},
+      {"endpoint": "POST /api/admin/mall/bookings/{id}/mark-delivered", "issue": "Charge creation errors are swallowed (logging.warning). The booking still becomes 'delivered' with no charge, and the admin only sees the generic toast. Consider showing a warning in the response when service_charge is null but MRP > 0."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin Paras Mall tab pills", "issues": ["The active 'Bookings (N)' pill was almost unreadable in the screenshot (light text on a light amber/white background) after a delivery. Check the active-state styling of admin-mall-tab-bookings."]},
+      {"screen": "Admin Mark Delivered confirm", "issues": ["The dialog amount is calculated in the browser as mrp*0.2. It ignores the configured service_charge_percent and min_service_charge_inr, so it could differ from the real charge if the config changes."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_mall_delivery_service_charge.py", "/app/test_reports/pytest/pytest_mall_delivery_svc.xml"],
+  "action_items": [
+    "Optional: make mark-delivered atomic (conditional update on status 'fulfilled') to stop duplicate community posts",
+    "Optional: show the configured percent in the admin confirm dialog instead of a hardcoded 0.2",
+    "Optional: check the contrast of the active Bookings tab pill on the admin Paras Mall page"
+  ],
+  "critical_code_review_comments": [
+    "Pre-existing: /api/redemption-service-charge/history/{user_id} and /pending/{user_id} take no auth (anyone who knows a uid can read that user's charges; IDOR).",
+    "The notification text for base_inr charges is hardcoded to say 'has been delivered'. That is fine for its only caller today, but it will be worded wrongly if base_inr is reused elsewhere.",
+    "The enrichment in user_history strips 'MALLDLV-' and looks up mall_bookings for every mall row missing product_name. It is a single $in query, so that is fine."
+  ],
+  "updated_files": ["/app/backend/tests/test_mall_delivery_service_charge.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Temporary only: bookings 2f15a109... and 666dfcb1... (user 76b75808) were set to 'fulfilled' and marked delivered, and a legacy charge SVC-TEST-LEGACY01 was inserted. All were restored or deleted: both bookings are back to mining with delivered_at None; the MALLDLV charges, legacy charge, notifications, service_charge_audit rows, community_feed and community_posts were removed. The pre-existing QA charge SVC-QA-RZP-1-DD0D203D (PENDING ₹300, qa_marker razorpay_loader_bug_v142) from an earlier iteration is still on user 9970100782. It was left untouched and it blocks that user's redemptions.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The test file restores itself: it flips booking 2f15a109 to fulfilled, calls mark-delivered with an admin Bearer token (login JSON {identifier:'admin@test.com', password:'153759'} -> access_token), then restores the booking and deletes the charge, notification, audit, feed and posts. The audit collection is service_charge_audit. UI login: login-identifier-input, then login-submit-btn, then login-pin-0..5, then login-submit-btn. Admin page route: /admin/mall."
+}

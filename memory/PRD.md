@@ -1,3 +1,13 @@
+## Shipped (Oct 2026 — Paras Mall Delivery Service Charge + Charge Details)
+- Admin mark-delivered now creates a 20% redemption service charge on product MRP (`MALLDLV-{booking_id}`, type `paras_mall_delivery`, `charge_basis: mrp`, details product/mrp/booking). This is in addition to the existing booking-time 20% charge on upfront PRC (user chose to keep both).
+- A pending delivery charge blocks the next redemption, the same as other charges. The user gets a notification.
+- `create_service_charge_on_success` gained `base_inr` and `details` params. The history endpoint fills in product details for older mall rows.
+- Mark-delivered is now an atomic status update (no double delivery), and the response carries a warning if the charge could not be created.
+- /my-service-charges: each row shows a type chip; tap to expand Type, Product, Charged on, %, Total, Status, Created, Paid on, Reference, Payment ID and Charge ID.
+- Admin Mall: confirm dialog and toast mention the charge; fixed the unreadable active tab pill.
+- Test: iteration_310, backend and frontend 100%. Its minor follow-ups were fixed afterwards and only lint-checked, not re-tested.
+
+
 ## Shipped (Oct 2026 — Emergent Google Sign-In)
 - `POST /api/auth/google/session` checks the Emergent `session_id` on the server and matches the user by email (case-insensitive).
   - Existing account: returns the same payload as PIN login (JWT plus session_token). The `_complete_login` helper is now shared, so ban, device-binding, single-session, subscription-expiry and history logic apply to Google logins too.

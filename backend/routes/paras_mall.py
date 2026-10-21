@@ -1561,10 +1561,12 @@ async def admin_mark_delivered(booking_id: str):
         raise HTTPException(400, f"Booking status is '{b.get('status')}', must be 'fulfilled' to deliver")
     if not (b.get("delivery") or {}).get("address_line"):
         raise HTTPException(400, "Cannot mark delivered — delivery address is missing on this booking.")
-    await db.mall_bookings.update_one(
-        {"booking_id": booking_id},
+    res = await db.mall_bookings.update_one(
+        {"booking_id": booking_id, "status": "fulfilled"},
         {"$set": {"status": "delivered", "delivered_at": now_utc().isoformat()}}
     )
+    if res.modified_count == 0:
+        raise HTTPException(400, "Booking was already marked delivered")
     # Re-fetch to get the now-delivered booking for downstream consumers.
     b_after = await db.mall_bookings.find_one({"booking_id": booking_id}) or b
     await post_community_event(b["user_id"], "delivered", b["product_name"], booking_id)
@@ -1593,6 +1595,8 @@ async def admin_mark_delivered(booking_id: str):
         "success": True,
         "message": "Marked delivered",
         "service_charge": {k: delivery_charge.get(k) for k in ("charge_id", "service_charge_amount", "status")} if delivery_charge else None,
+        "service_charge_warning": None if delivery_charge or not float(b.get("mrp_inr") or 0) else
+            "Delivered, but the 20% MRP service charge could not be created. Please check the logs.",
     }
 
 
