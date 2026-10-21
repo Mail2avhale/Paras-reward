@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap } from 'lucide-react';
+import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 import { ensureRazorpayLoaded } from '../lib/razorpay';
@@ -10,12 +10,58 @@ import { isNativePlatform } from '@/utils/nativeUx';
 
 const fmt = (n) => `₹ ${(Number(n) || 0).toFixed(2)}`;
 
+const TYPE_LABELS = {
+  bank_redeem: 'Bank Redeem',
+  mobile_recharge: 'Mobile Recharge',
+  dth_recharge: 'DTH Recharge',
+  bill_payment: 'Bill Payment',
+  paras_mall_booking: 'Paras Mall Booking',
+  paras_mall_delivery: 'Paras Mall Delivery',
+  subscription: 'Subscription',
+  gift_prc: 'Gift PRC',
+};
+const typeLabel = (t) => TYPE_LABELS[t] || (t ? t.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()) : 'Redemption');
+const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
+
+const DetailRow = ({ label, value, testId, mono }) => (
+  <div className="flex items-start justify-between gap-3 py-1">
+    <span className="text-[11px] text-slate-500 shrink-0">{label}</span>
+    <span className={`text-[11px] text-right text-slate-800 break-all ${mono ? 'font-mono' : 'font-medium'}`} data-testid={testId}>{value}</span>
+  </div>
+);
+
+const ChargeDetails = ({ c }) => {
+  const d = c.details || {};
+  const isMrp = c.charge_basis === 'mrp';
+  return (
+    <div className="mt-3 pt-2 border-t border-slate-200" data-testid={`svc-details-${c.charge_id}`}>
+      <DetailRow label="Type" value={typeLabel(c.redemption_type)} testId={`svc-detail-type-${c.charge_id}`} />
+      {d.product_name && <DetailRow label="Product" value={d.product_name} testId={`svc-detail-product-${c.charge_id}`} />}
+      <DetailRow
+        label="Charged on"
+        value={isMrp ? `Product MRP ${fmt(c.redemption_value_inr)}` : `${Number(c.prc_amount || 0).toLocaleString('en-IN')} PRC = ${fmt(c.redemption_value_inr)}`}
+        testId={`svc-detail-basis-${c.charge_id}`}
+      />
+      {!isMrp && d.mrp_inr ? <DetailRow label="Product MRP" value={fmt(d.mrp_inr)} /> : null}
+      <DetailRow label="Service charge" value={`${Number(c.service_charge_percentage || 0)}% = ${fmt(c.service_charge_amount)}`} testId={`svc-detail-rate-${c.charge_id}`} />
+      <DetailRow label="Total payable" value={fmt(c.total_payable)} />
+      <DetailRow label="Status" value={c.status} />
+      <DetailRow label="Created" value={fmtDate(c.created_at)} />
+      {c.paid_at && <DetailRow label="Paid on" value={fmtDate(c.paid_at)} />}
+      <DetailRow label="Reference" value={c.redemption_id || '—'} mono />
+      {c.payment_id && <DetailRow label="Payment ID" value={c.payment_id} mono />}
+      <DetailRow label="Charge ID" value={c.charge_id} mono />
+    </div>
+  );
+};
+
 const MyServiceCharges = ({ user }) => {
   const navigate = useNavigate();
   const [data, setData] = useState({ charges: [], totals: {} });
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(null);
   const [bulkPaying, setBulkPaying] = useState(false);
+  const [expanded, setExpanded] = useState(null);
 
   const load = useCallback(async () => {
     if (!user?.uid) return;
@@ -207,20 +253,32 @@ const MyServiceCharges = ({ user }) => {
           <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
             <IndianRupee className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm text-slate-500">No service charges yet.</p>
-            <p className="text-xs text-slate-400 mt-1">Charges appear after a successful PRC redemption.</p>
+            <p className="text-xs text-slate-400 mt-1">Charges appear after a successful PRC redemption or Paras Mall delivery.</p>
           </div>
         ) : (
           <div className="space-y-2">
             {data.charges.map(c => (
               <div key={c.charge_id} className={`bg-white border rounded-xl p-3 ${c.status === 'PENDING' ? 'border-yellow-300 bg-yellow-50/30' : 'border-slate-200'}`} data-testid={`svc-row-${c.charge_id}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">{fmt(c.service_charge_amount)}</p>
-                    <p className="text-[10px] text-slate-500 truncate">
-                      {(c.created_at || '').slice(0, 10)} · {c.prc_amount} PRC → {fmt(c.redemption_value_inr)}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(expanded === c.charge_id ? null : c.charge_id)}
+                    className="min-w-0 flex-1 text-left"
+                    aria-expanded={expanded === c.charge_id}
+                    data-testid={`svc-toggle-${c.charge_id}`}
+                  >
+                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                      {fmt(c.service_charge_amount)}
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{typeLabel(c.redemption_type)}</span>
                     </p>
-                    <p className="text-[10px] font-mono text-slate-400 truncate">{c.charge_id}</p>
-                  </div>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      {(c.created_at || '').slice(0, 10)} · {c.details?.product_name || (c.charge_basis === 'mrp' ? `MRP ${fmt(c.redemption_value_inr)}` : `${c.prc_amount} PRC → ${fmt(c.redemption_value_inr)}`)}
+                    </p>
+                    <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                      {expanded === c.charge_id ? 'Hide details' : 'View details'}
+                      <ChevronDown className={`w-3 h-3 transition-transform ${expanded === c.charge_id ? 'rotate-180' : ''}`} />
+                    </p>
+                  </button>
                   <div className="text-right shrink-0">
                     <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${c.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {c.status}
@@ -232,6 +290,7 @@ const MyServiceCharges = ({ user }) => {
                     )}
                   </div>
                 </div>
+                {expanded === c.charge_id && <ChargeDetails c={c} />}
               </div>
             ))}
           </div>

@@ -256,14 +256,17 @@ const AdminParasMall = () => {
       return;
     }
     if (!window.confirm(
-      `Mark as DELIVERED?\n\nShipping to:\n${fullAddr}\n\nProduct: ${booking.product_name}\nBooking: ${booking.booking_id.slice(0, 8)}...`
+      `Mark as DELIVERED?\n\nShipping to:\n${fullAddr}\n\nProduct: ${booking.product_name}\nBooking: ${booking.booking_id.slice(0, 8)}...\n\nA 20% service charge on MRP (${'\u20B9'}${(Number(booking.mrp_inr || 0) * 0.2).toFixed(2)}) will be raised to the user.`
     )) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API}/admin/mall/bookings/${booking.booking_id}/mark-delivered`, {}, {
+      const { data } = await axios.post(`${API}/admin/mall/bookings/${booking.booking_id}/mark-delivered`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast.success('Marked delivered + community post created');
+      const svc = data?.service_charge;
+      toast.success(svc
+        ? `Marked delivered. ${'₹'}${Number(svc.service_charge_amount).toFixed(2)} service charge (20% of MRP) created for the user.`
+        : 'Marked delivered + community post created');
       fetchAll();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Mark delivered failed');

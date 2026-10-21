@@ -800,6 +800,8 @@ async def book_product(product_id: str, body: BookProductRequest):
             redemption_id=booking_id,
             prc_amount=float(upfront_prc),
             redemption_type="paras_mall_booking",
+            details={"product_name": product["name"], "mrp_inr": product["mrp_inr"],
+                     "booking_id": booking_id, "stage": "booking"},
         )
     except Exception as _svc_e:
         logging.warning(f"[MALL] svc-charge hook failed (non-fatal): {_svc_e}")
@@ -1569,7 +1571,29 @@ async def admin_mark_delivered(booking_id: str):
     # NEW: Auto-publish to Community Forum under "Product Delivery" category
     # so social proof is visible to the entire user base.
     await post_community_forum_delivery(b_after)
-    return {"success": True, "message": "Marked delivered"}
+
+    # 20% Redemption Service Charge on product MRP, due once the product is delivered
+    delivery_charge = None
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        mrp = float(b.get("mrp_inr") or 0)
+        if mrp > 0:
+            delivery_charge = await create_service_charge_on_success(
+                user_id=b["user_id"],
+                redemption_id=f"MALLDLV-{booking_id}",
+                prc_amount=0.0,
+                redemption_type="paras_mall_delivery",
+                base_inr=mrp,
+                details={"product_name": b.get("product_name"), "mrp_inr": mrp,
+                         "booking_id": booking_id, "stage": "delivery"},
+            )
+    except Exception as _svc_e:
+        logging.warning(f"[MALL] delivery svc-charge hook failed for {booking_id}: {_svc_e}")
+    return {
+        "success": True,
+        "message": "Marked delivered",
+        "service_charge": {k: delivery_charge.get(k) for k in ("charge_id", "service_charge_amount", "status")} if delivery_charge else None,
+    }
 
 
 @admin_router.get("/analytics")

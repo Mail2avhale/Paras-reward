@@ -56,6 +56,7 @@ _REDEMPTION_TYPE_LABELS = {
     "subscription": "Subscription",
     "gift_prc": "Gift PRC",
     "paras_mall": "Paras Mall booking",
+    "paras_mall_delivery": "Paras Mall delivery",
     "generic": "redemption",
 }
 
@@ -79,6 +80,8 @@ def _redemption_type_label(redemption_id: Optional[str]) -> str:
         return _REDEMPTION_TYPE_LABELS["subscription"]
     if rid.startswith("GIFT"):
         return _REDEMPTION_TYPE_LABELS["gift_prc"]
+    if rid.startswith("MALLDLV"):
+        return _REDEMPTION_TYPE_LABELS["paras_mall_delivery"]
     if rid.startswith("MALL") or rid.startswith("BOOK"):
         return _REDEMPTION_TYPE_LABELS["paras_mall"]
     return "redemption"
@@ -256,19 +259,21 @@ async def create_service_charge_on_success(
     redemption_id: str,
     prc_amount: float,
     redemption_type: str = "generic",
+    base_inr: Optional[float] = None,
+    details: Optional[dict] = None,
 ) -> Optional[dict]:
     """Called when a redemption reaches SUCCESSFULLY_COMPLETED status.
 
+    `base_inr` charges on a rupee value directly (e.g. Mall product MRP) instead of PRC.
     Idempotent — unique index on redemption_id ensures at most one row.
-    Returns the charge doc or None on failure.
     """
-    if not redemption_id or prc_amount <= 0:
+    if not redemption_id or (prc_amount <= 0 and not base_inr):
         return None
     cfg = await get_config()
     rate = float(cfg["prc_inr_rate"])
     pct = float(cfg["service_charge_percent"])
 
-    inr_value = round(prc_amount / rate, 2)
+    inr_value = round(float(base_inr), 2) if base_inr else round(prc_amount / rate, 2)
     fee = round(inr_value * pct / 100, 2)
     fee = max(fee, float(cfg["min_service_charge_inr"]))
 
@@ -281,6 +286,8 @@ async def create_service_charge_on_success(
         "redemption_id": redemption_id,
         "redemption_type": redemption_type,
         "prc_amount": prc_amount,
+        "charge_basis": "mrp" if base_inr else "prc",
+        "details": details or {},
         "prc_rate": rate,               # SNAPSHOT — never mutated (Point 10)
         "redemption_value_inr": inr_value,
         "service_charge_percentage": pct,
@@ -312,8 +319,12 @@ async def create_service_charge_on_success(
                 "type": "redemption_service_charge_created",
                 "title": "💰 Redemption Service Charge Pending",
                 "message": (
+                    f"Your {(details or {}).get('product_name', 'Paras Mall product')} (MRP ₹{inr_value:.0f}) has been delivered. "
+                    f"A {pct:.0f}% cash service charge of ₹{fee:.0f} is now due. "
+                    f"Pay it to unlock your next redemption."
+                ) if base_inr else (
                     f"Your ₹{inr_value:.0f} redemption completed successfully. "
-                    f"A 20% cash service charge of ₹{fee:.0f} is now due. "
+                    f"A {pct:.0f}% cash service charge of ₹{fee:.0f} is now due. "
                     f"Pay it to unlock your next redemption."
                 ),
                 "action_url": "/my-service-charges",
@@ -374,6 +385,17 @@ async def user_history(user_id: str, limit: int = 100):
     rows = await db.redemption_service_charges.find(
         {"user_id": user_id}, {"_id": 0},
     ).sort("created_at", -1).to_list(limit)
+    missing = [r["redemption_id"].replace("MALLDLV-", "") for r in rows
+               if (r.get("redemption_type") or "").startswith("paras_mall") and not (r.get("details") or {}).get("product_name")]
+    if missing:
+        bookings = await db.mall_bookings.find(
+            {"booking_id": {"$in": missing}}, {"_id": 0, "booking_id": 1, "product_name": 1, "mrp_inr": 1},
+        ).to_list(len(missing))
+        by_id = {b["booking_id"]: b for b in bookings}
+        for r in rows:
+            b = by_id.get((r.get("redemption_id") or "").replace("MALLDLV-", ""))
+            if b and not (r.get("details") or {}).get("product_name"):
+                r["details"] = {**(r.get("details") or {}), "product_name": b.get("product_name"), "mrp_inr": b.get("mrp_inr")}
     totals = {"pending": 0.0, "paid": 0.0}
     for r in rows:
         if r["status"] == "PENDING":
