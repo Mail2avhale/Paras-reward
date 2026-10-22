@@ -91,7 +91,7 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
       </div>
 
       <div className="space-y-2">
-        <Row label="Total Limit" value={both(cap)} testId="progressive-total-limit" valueColor="#14532D" />
+        <Row label="Total Limit" value={both(cap)} testId="progressive-total-limit" valueColor="var(--pr-ink)" />
         <Row label="Used" value={`${used > 0 ? '- ' : ''}${both(used)}`} testId="progressive-used" valueColor="#DC2626" />
         <Row label="Remaining" value={both(data.available_prc)} testId="progressive-remaining" valueColor="#15803D" strong />
       </div>

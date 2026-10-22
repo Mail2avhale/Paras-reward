@@ -326,6 +326,10 @@ body.pr-user-dark .bg-blue-50, body.pr-user-dark .bg-purple-50, body.pr-user-dar
 body.pr-user-dark .bg-green-50, body.pr-user-dark .bg-emerald-50, body.pr-user-dark .bg-amber-50, body.pr-user-dark .bg-red-50 { background-color: var(--pr-surface-2) !important; }
 body.pr-user-dark .text-slate-300 { color: #C4C4CF !important; }
 body.pr-user-dark [data-testid="create-post-btn"] { background: linear-gradient(135deg, #8B5CF6, #6D28D9) !important; color: #FFFFFF !important; }
+body.pr-user-dark .hover\:bg-white:hover, body.pr-user-dark .group:hover .group-hover\:bg-slate-50, body.pr-user-dark .hover\:bg-slate-50:hover, body.pr-user-dark .hover\:bg-gray-50:hover, body.pr-user-dark .hover\:bg-gray-100:hover { background-color: #26262F !important; }
+body.pr-user-dark .text-blue-700, body.pr-user-dark .text-blue-600 { color: #A78BFA !important; }
+body.pr-user-dark .bg-emerald-500 { background-color: #059669 !important; }
+body.pr-user-dark .mall-filter-count { color: rgba(244, 244, 247, 0.65) !important; }
 body.pr-user-dark ::selection { background: rgba(139, 92, 246, 0.45); color: #FFFFFF; }
 
 /* Convenience utilities so we don't spread hex codes across JSX */

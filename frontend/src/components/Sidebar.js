@@ -237,7 +237,7 @@ const Sidebar = ({ isOpen, onClose, user, onLogout }) => {
                       </div>
                       <span
                         className={`text-[9.5px] leading-[1.15] text-center break-words ${
-                          active ? 'text-blue-700 font-semibold' : 'text-slate-700 font-medium'
+                          active ? 'text-violet-300 font-semibold' : 'text-slate-700 font-medium'
                         }`}
                       >
                         {label}

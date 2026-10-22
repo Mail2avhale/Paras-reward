@@ -1,3 +1,14 @@
+## Shipped (Oct 2026 — User App Dark Theme, PhonePe-inspired)
+- `body.pr-user-dark` is set on every non-/admin and non-/manager route. It is applied in index.html before React mounts (no light flash) and kept in sync by the App.js GoogleAuthGate effect.
+- The old light overrides in index.css (and the ParasMall.css "Spinny overlay") are scoped to `body:not(.pr-user-dark)`, so admin is unchanged.
+- Dark tokens: bg #0A0A0E, surfaces #17171E/#202029, line #2A2A35, text #F4F4F7, violet primary #8B5CF6 with gradient buttons, gold #F5C451, emerald #2DD4A0. shadcn vars are overridden too.
+- Remaps cover bg-white, light gradients, text-slate/gray, hover:bg-white, bg-*-50 and the hex panels. Dark text is kept on solid amber/yellow/orange chips.
+- Component tweaks: violet wallet card, dark bottom nav (white active item + violet bar), dark Mall (original design), Sidebar active tile in violet.
+- Pre-existing bugs fixed: Notifications printed icon names as text; AdminCompanyWallets pie label crash.
+- Test: iteration_312 audit plus a re-audit. All its remaining hits were fixed; /community, /notifications and /admin (light) were checked by screenshot.
+- Known: on /mall the saver bar overlaps the header at 430px, and the service-fee banner covers the TopBar (both pre-existing).
+
+
 ## Shipped (Oct 2026 — Recharge: PRC Admin Charge replaced by 20% Cash Service Charge)
 - Production check (via the deployer, read-only): 0 service-charge rows for recharges. Only elite_subscription, paras_mall_booking and sale_elite_subscription rows existed. Recharges carried an inline ~20% PRC admin charge instead.
 - Mobile/DTH recharge (`routes/eko_recharge.py`): the admin charge is set to 0, so PRC deducted = amount×10 + processing fee. `_raise_recharge_service_charge` creates a 20% cash charge (mobile_recharge / dth_recharge, details: operator, masked number, amount) only on SUCCESS: at initiate, admin enquiry and bulk enquiry. It is idempotent.
