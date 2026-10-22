@@ -341,8 +341,14 @@ android {
         //     - Fix (frontend): pending-banner load fires reconcile-user
         //       before reading /pending so the banner disappears on the
         //       next screen open with zero user action.
-        versionCode 51
-        versionName "1.5.1"
+        // versionCode 51 → 52 — Oct 2026 — v1.6.0
+        //     - Unified progressive redeem limit (Recharge + Bank Redeem), atomic + refund on failure
+        //     - Emergent-managed Google Sign-In (alongside Mobile/Email + PIN)
+        //     - 20% cash service charge on Mobile/DTH recharge (replaces PRC admin charge)
+        //       and on Paras Mall delivery (MRP); expandable service-charge history
+        //     - Brand palette refresh (Dashboard, Refer & Earn), uploads moved to object storage
+        versionCode 52
+        versionName "1.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
