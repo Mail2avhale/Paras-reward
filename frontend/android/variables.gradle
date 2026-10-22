@@ -1,5 +1,5 @@
 ext {
-    minSdkVersion = 23
+    minSdkVersion = 24
     // Feb 21 2026 — Bumped 35 → 36 (Android 16) to comply with
     // Google Play's Aug 31 2026 target API level 36 requirement.
     compileSdkVersion = 36
