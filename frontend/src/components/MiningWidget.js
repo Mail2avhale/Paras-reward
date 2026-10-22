@@ -323,14 +323,14 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
           <p className="text-xs text-center mb-2 tracking-wider font-semibold uppercase" style={{ color: 'var(--pr-green)' }}>{t('timeRemaining') || 'Time Remaining'}</p>
           <div className="flex items-center justify-center gap-0.5 mb-4">
             {formatTime(sessionTimeRemaining).split('').map((char, i) => (
-              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: '#FFFFFF', border: '1px solid #C7D9F3', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}>
+              <div key={i} className={char === ':' ? 'w-3 text-center' : 'w-8 h-10 rounded-md flex items-center justify-center'} style={char !== ':' ? { background: 'var(--pr-surface-2)', border: '1px solid var(--pr-line)', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}>
                 <span className={`font-mono font-bold tabular-nums ${char === ':' ? `text-lg` : 'text-xl'}`} style={{ color: char === ':' ? 'var(--pr-gold)' : 'var(--pr-ink)' }}>{char}</span>
               </div>
             ))}
           </div>
 
           {/* Session Earnings Card */}
-          <div className="rounded-2xl p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }} data-testid="session-earnings-card">
+          <div className="rounded-2xl p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)' }} data-testid="session-earnings-card">
             <p className="text-xs text-center mb-2 tracking-wider font-semibold uppercase" style={{ color: 'var(--pr-green)' }}>{t('sessionEarnings') || 'Session Earnings'}</p>
             <div className="flex items-center justify-center gap-1">
               <Coins className="w-4 h-4 mr-1" style={{ color: 'var(--pr-gold)' }} />
@@ -338,7 +338,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
                 <motion.div
                   key={`${i}-${char}`}
                   className={char === '.' ? 'w-2 flex items-end justify-center pb-0.5' : 'w-7 h-9 rounded-md flex items-center justify-center'}
-                  style={char !== '.' ? { background: '#FFFFFF', border: '1px solid #C7D9F3', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}
+                  style={char !== '.' ? { background: 'var(--pr-surface-2)', border: '1px solid var(--pr-line)', boxShadow: '0 2px 6px -3px rgba(36, 107, 206, 0.35)' } : {}}
                   initial={{ y: -3, opacity: 0.6 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.15 }}
@@ -351,11 +351,11 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
             {/* PRC/sec + PRC/hr rate — mint green rate, gold hour, silver labels */}
             <div className="flex items-center justify-center gap-3 mt-3">
-              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: '#FFFFFF', border: '1px solid rgba(7, 92, 59, 0.25)' }}>
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: 'var(--pr-surface-2)', border: '1px solid rgba(7, 92, 59, 0.25)' }}>
                 <p className="text-sm font-bold font-mono leading-tight" style={{ color: 'var(--paras-mint)' }}>+{(miningRate / 3600).toFixed(4)}</p>
                 <p className="text-[10px] font-semibold tracking-wider mt-0.5 text-[color:var(--paras-text-mute)]">PRC/SEC</p>
               </div>
-              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: '#FFFFFF', border: '1px solid #C7D9F3' }}>
+              <div className="rounded-lg px-4 py-2 text-center min-w-[100px]" style={{ background: 'var(--pr-surface-2)', border: '1px solid var(--pr-line)' }}>
                 <p className="text-sm font-bold font-mono leading-tight" style={{ color: 'var(--pr-blue)' }}>{miningRate.toFixed(1)}</p>
                 <p className="text-[10px] font-semibold tracking-wider mt-0.5 text-[color:var(--paras-text-mute)]">PRC/HOUR</p>
               </div>
@@ -380,10 +380,10 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
 
           {/* Collect Button — sophisticated metallic gold gradient */}
           {isFreeUser ? (
-            <div className="rounded-2xl p-3.5" style={{ background: '#FFF6DC', border: '1px solid rgba(214, 166, 56, 0.5)' }} data-testid="upgrade-to-collect-box">
+            <div className="rounded-2xl p-3.5" style={{ background: 'rgba(245, 196, 81, 0.08)', border: '1px solid rgba(214, 166, 56, 0.5)' }} data-testid="upgrade-to-collect-box">
               <div className="flex items-center gap-2 mb-2.5">
                 <Crown className="w-4 h-4" style={{ color: 'var(--pr-gold)' }} />
-                <p className="font-semibold text-xs" style={{ color: '#7A5A10' }}>Upgrade to Collect PRC</p>
+                <p className="font-semibold text-xs" style={{ color: 'var(--pr-gold)' }}>Upgrade to Collect PRC</p>
               </div>
               <Button disabled className="pr-btn-disabled w-full font-semibold py-2.5 rounded-xl text-sm disabled:opacity-100" data-testid="collect-disabled-btn">
                 <CheckCircle className="w-4 h-4 mr-1" /> Collect ({sessionPRC.toFixed(2)} PRC)
@@ -434,7 +434,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
       <div className="text-center">
         <motion.div
           className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center"
-          style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}
+          style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)' }}
           animate={{ scale: [1, 1.04, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -476,7 +476,7 @@ const MiningWidget = ({ user, onBalanceUpdate }) => {
         )}
 
         {isFreeUser && (
-          <p className="text-xs mt-2 font-medium" style={{ color: '#7A5A10' }}>Upgrade to Elite to collect earned PRC</p>
+          <p className="text-xs mt-2 font-medium" style={{ color: 'var(--pr-gold)' }}>Upgrade to Elite to collect earned PRC</p>
         )}
       </div>
 

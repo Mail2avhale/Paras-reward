@@ -415,7 +415,7 @@ const DashboardModern = ({ user, onLogout }) => {
           className="pr-dark-scope relative overflow-hidden rounded-2xl"
           data-testid="dashboard-wallet-card"
           style={{
-            background: 'linear-gradient(145deg, #2A303A 0%, #20252D 55%, #1A1E25 100%)',
+            background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 42%, #2E1065 78%, #1A0B33 100%)',
             boxShadow: stats.subscriptionPlan === 'elite'
               ? '0 25px 50px -12px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
               : stats.subscriptionPlan === 'growth'
@@ -425,7 +425,7 @@ const DashboardModern = ({ user, onLogout }) => {
               : '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
             transformStyle: 'preserve-3d',
             aspectRatio: '1.586',
-            border: '1.5px solid rgba(214, 166, 56, 0.45)'
+            border: '1px solid rgba(196, 181, 253, 0.35)'
           }}
         >
           {/* Animated border glow - Plan specific */}
@@ -692,8 +692,8 @@ const DashboardModern = ({ user, onLogout }) => {
                 <span 
                   className="text-4xl font-black tracking-tight"
                   style={{
-                    color: '#3D82E0',
-                    textShadow: '0 2px 14px rgba(36, 107, 206, 0.45)'
+                    color: '#FFFFFF',
+                    textShadow: '0 2px 18px rgba(167, 139, 250, 0.6)'
                   }}
                   data-testid="dashboard-prc-balance"
                 >
@@ -768,10 +768,10 @@ const DashboardModern = ({ user, onLogout }) => {
             data-testid="dashboard-subscription-card"
             style={{
               background: stats.subscriptionPlan === 'elite' 
-                ? 'linear-gradient(145deg, #FFFBEB 0%, #FEF9C3 50%, #FFFDF5 100%)'
+                ? 'linear-gradient(145deg, #241C08 0%, #17171E 70%)'
                 : stats.subscriptionPlan === 'growth'
-                ? 'linear-gradient(145deg, #ECFDF5 0%, #F0FDF4 50%, #FFFFFF 100%)'
-                : 'linear-gradient(145deg, #EFF6FF 0%, #F0F9FF 50%, #FFFFFF 100%)',
+                ? 'linear-gradient(145deg, #0B2A21 0%, #17171E 70%)'
+                : 'linear-gradient(145deg, #1A1530 0%, #17171E 70%)',
               border: stats.subscriptionPlan === 'elite'
                 ? '1px solid rgba(214, 166, 56, 0.55)'
                 : stats.subscriptionPlan === 'growth'
@@ -924,14 +924,14 @@ const DashboardModern = ({ user, onLogout }) => {
           className="w-full rounded-2xl p-4 relative overflow-hidden text-left transition-transform active:scale-[0.99]"
           data-testid="dashboard-pay-partner-store-btn"
           style={{
-            background: 'var(--pr-pale)',
-            border: '1px solid #C7D9F3',
-            borderLeft: '4px solid var(--pr-green)',
+            background: 'linear-gradient(135deg, #1C1730 0%, #17171E 100%)',
+            border: '1px solid var(--pr-line)',
+            borderLeft: '4px solid #8B5CF6',
             boxShadow: 'var(--paras-shadow-card)'
           }}
         >
           <div className="relative flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--pr-green)' }}>
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
               <svg className="w-5 h-5" style={{ color: '#FFFFFF' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
@@ -941,7 +941,7 @@ const DashboardModern = ({ user, onLogout }) => {
                 <p className="font-bold text-sm" style={{ color: 'var(--pr-green)' }}>Pay to Partner Store</p>
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--pr-gold)', color: 'var(--pr-charcoal)' }}>NEW</span>
               </div>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#5B6670' }}>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--paras-text-mute)' }}>
                 Use PRC at verified local shops via mobile or Store ID
               </p>
             </div>

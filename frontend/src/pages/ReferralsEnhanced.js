@@ -466,7 +466,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               {commissionConfig.tiers.map((t) => (
                 <div
                   key={t.tier}
-                  className="rounded-lg p-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}
+                  className="rounded-lg p-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)' }}
                   data-testid={`commission-tier-${t.tier}`}
                 >
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider">
@@ -587,7 +587,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
               </>
             )}
 
-            <div className="rounded-xl p-3 text-[11px] leading-relaxed" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3', color: '#5B6670' }}>
+            <div className="rounded-xl p-3 text-[11px] leading-relaxed" style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)', color: 'var(--paras-text-mute)' }}>
               💡 Each <strong className="text-emerald-400">Active</strong> network member contributes
               <span className="text-emerald-400 font-bold"> +2% </span>
               to your daily mining boost (capped at +100% per level).
@@ -794,7 +794,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
                   {partnerPosition.community_health.inactive_count}
                 </p>
               </div>
-              <div className="rounded-lg py-2 px-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3' }}>
+              <div className="rounded-lg py-2 px-2 text-center" style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)' }}>
                 <p className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: 'var(--pr-blue)' }}>Health</p>
                 <p className="text-indigo-300 font-bold text-lg tabular-nums" data-testid="ch-health-pct">
                   {partnerPosition.community_health.health_pct}%
@@ -827,7 +827,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
             className={`rounded-2xl p-5 border ${
               partnerPosition.next_promotion.ready
                 ? 'bg-[#ECF6F0] border-[#075C3B]/40'
-                : 'bg-[#EDF4FF] border-[#C7D9F3]'
+                : 'bg-[#EDF4FF] border-[var(--pr-line)]'
             }`}
             data-testid="next-promotion-tracker"
           >

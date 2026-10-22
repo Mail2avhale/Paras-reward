@@ -52,133 +52,178 @@
    predictable hierarchy on the light theme.
    ─────────────────────────────────────────────────────────────────── */
 /* Page-level darkest → warm cream */
-.bg-black,
-.bg-gray-950, .bg-slate-950, .bg-zinc-950, .bg-neutral-950,
-.bg-gray-900, .bg-slate-900, .bg-zinc-900, .bg-neutral-900,
-.bg-gray-900\/95, .bg-slate-900\/95, .bg-zinc-900\/95,
-.bg-gray-900\/80, .bg-slate-900\/80,
-.bg-gray-900\/50, .bg-slate-900\/50,
-.bg-gray-950\/80, .bg-slate-950\/80 {
+body:not(.pr-user-dark) .bg-black, body:not(.pr-user-dark) .bg-gray-950, body:not(.pr-user-dark) .bg-slate-950, body:not(.pr-user-dark) .bg-zinc-950, body:not(.pr-user-dark) .bg-neutral-950, body:not(.pr-user-dark) .bg-gray-900, body:not(.pr-user-dark) .bg-slate-900, body:not(.pr-user-dark) .bg-zinc-900, body:not(.pr-user-dark) .bg-neutral-900, body:not(.pr-user-dark) .bg-gray-900\/95, body:not(.pr-user-dark) .bg-slate-900\/95, body:not(.pr-user-dark) .bg-zinc-900\/95, body:not(.pr-user-dark) .bg-gray-900\/80, body:not(.pr-user-dark) .bg-slate-900\/80, body:not(.pr-user-dark) .bg-gray-900\/50, body:not(.pr-user-dark) .bg-slate-900\/50, body:not(.pr-user-dark) .bg-gray-950\/80, body:not(.pr-user-dark) .bg-slate-950\/80 {
   background-color: #FFF9E6 !important; /* Cream */
 }
 
 /* Card / panel dark → white */
-.bg-gray-800, .bg-slate-800, .bg-zinc-800, .bg-neutral-800,
-.bg-gray-800\/50, .bg-slate-800\/50,
-.bg-gray-800\/70, .bg-slate-800\/70,
-.bg-gray-800\/80, .bg-slate-800\/80 {
+body:not(.pr-user-dark) .bg-gray-800, body:not(.pr-user-dark) .bg-slate-800, body:not(.pr-user-dark) .bg-zinc-800, body:not(.pr-user-dark) .bg-neutral-800, body:not(.pr-user-dark) .bg-gray-800\/50, body:not(.pr-user-dark) .bg-slate-800\/50, body:not(.pr-user-dark) .bg-gray-800\/70, body:not(.pr-user-dark) .bg-slate-800\/70, body:not(.pr-user-dark) .bg-gray-800\/80, body:not(.pr-user-dark) .bg-slate-800\/80 {
   background-color: #FFFFFF !important; /* White cards */
   border-color: #D1FAE5 !important;     /* soft mint edge */
 }
 
 /* Elevated / secondary dark → light blue tint */
-.bg-gray-700, .bg-slate-700, .bg-zinc-700 {
+body:not(.pr-user-dark) .bg-gray-700, body:not(.pr-user-dark) .bg-slate-700, body:not(.pr-user-dark) .bg-zinc-700 {
   background-color: #F0F9FF !important; /* Sky-50 */
 }
 
 /* Muted grey surfaces → warm cream alt */
-.bg-gray-600, .bg-slate-600 {
+body:not(.pr-user-dark) .bg-gray-600, body:not(.pr-user-dark) .bg-slate-600 {
   background-color: #FEFCE8 !important; /* Yellow-50 (cream alt) */
 }
 
 /* Text — force readable dark green everywhere text-white was used */
-.text-white,
-.text-gray-50, .text-slate-50, .text-neutral-50,
-.text-gray-100, .text-slate-100, .text-neutral-100,
-.text-gray-200, .text-slate-200 {
+body:not(.pr-user-dark) .text-white, body:not(.pr-user-dark) .text-gray-50, body:not(.pr-user-dark) .text-slate-50, body:not(.pr-user-dark) .text-neutral-50, body:not(.pr-user-dark) .text-gray-100, body:not(.pr-user-dark) .text-slate-100, body:not(.pr-user-dark) .text-neutral-100, body:not(.pr-user-dark) .text-gray-200, body:not(.pr-user-dark) .text-slate-200 {
   color: #263238 !important; /* Brand dark text */
 }
 
 /* Muted-on-dark text → gray-600 on light */
-.text-gray-300, .text-slate-300, .text-neutral-300,
-.text-gray-400, .text-slate-400, .text-neutral-400,
-.text-gray-500, .text-slate-500, .text-neutral-500 {
+body:not(.pr-user-dark) .text-gray-300, body:not(.pr-user-dark) .text-slate-300, body:not(.pr-user-dark) .text-neutral-300, body:not(.pr-user-dark) .text-gray-400, body:not(.pr-user-dark) .text-slate-400, body:not(.pr-user-dark) .text-neutral-400, body:not(.pr-user-dark) .text-gray-500, body:not(.pr-user-dark) .text-slate-500, body:not(.pr-user-dark) .text-neutral-500 {
   color: #4B5563 !important; /* slate-600 */
 }
 
 /* Borders that were dark → soft mint */
-.border-gray-800, .border-slate-800, .border-zinc-800,
-.border-gray-900, .border-slate-900, .border-zinc-900,
-.border-gray-700, .border-slate-700 {
+body:not(.pr-user-dark) .border-gray-800, body:not(.pr-user-dark) .border-slate-800, body:not(.pr-user-dark) .border-zinc-800, body:not(.pr-user-dark) .border-gray-900, body:not(.pr-user-dark) .border-slate-900, body:not(.pr-user-dark) .border-zinc-900, body:not(.pr-user-dark) .border-gray-700, body:not(.pr-user-dark) .border-slate-700 {
   border-color: #D1FAE5 !important; /* Emerald-100 */
 }
 
 /* Gradients that used dark navy → cream-to-white */
-.from-gray-950, .from-slate-950, .from-gray-900, .from-slate-900,
-.from-black,
-.from-purple-900, .from-indigo-900, .from-blue-900, .from-pink-900 {
+body:not(.pr-user-dark) .from-gray-950, body:not(.pr-user-dark) .from-slate-950, body:not(.pr-user-dark) .from-gray-900, body:not(.pr-user-dark) .from-slate-900, body:not(.pr-user-dark) .from-black, body:not(.pr-user-dark) .from-purple-900, body:not(.pr-user-dark) .from-indigo-900, body:not(.pr-user-dark) .from-blue-900, body:not(.pr-user-dark) .from-pink-900 {
   --tw-gradient-from: #FFF9E6 var(--tw-gradient-from-position) !important;
   --tw-gradient-to: rgba(255, 249, 230, 0) var(--tw-gradient-to-position) !important;
 }
-.via-gray-900, .via-slate-900, .via-purple-900, .via-gray-950, .via-slate-950,
-.via-indigo-900, .via-blue-900, .via-pink-900 {
+body:not(.pr-user-dark) .via-gray-900, body:not(.pr-user-dark) .via-slate-900, body:not(.pr-user-dark) .via-purple-900, body:not(.pr-user-dark) .via-gray-950, body:not(.pr-user-dark) .via-slate-950, body:not(.pr-user-dark) .via-indigo-900, body:not(.pr-user-dark) .via-blue-900, body:not(.pr-user-dark) .via-pink-900 {
   --tw-gradient-via: #FEFCE8 var(--tw-gradient-via-position) !important;
   --tw-gradient-to: rgba(254, 252, 232, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
 }
-.to-gray-950, .to-slate-950, .to-gray-900, .to-slate-900, .to-black,
-.to-purple-900, .to-indigo-900, .to-blue-900, .to-pink-900 {
+body:not(.pr-user-dark) .to-gray-950, body:not(.pr-user-dark) .to-slate-950, body:not(.pr-user-dark) .to-gray-900, body:not(.pr-user-dark) .to-slate-900, body:not(.pr-user-dark) .to-black, body:not(.pr-user-dark) .to-purple-900, body:not(.pr-user-dark) .to-indigo-900, body:not(.pr-user-dark) .to-blue-900, body:not(.pr-user-dark) .to-pink-900 {
   --tw-gradient-to: #FFFFFF var(--tw-gradient-to-position) !important;
 }
 
 /* Purple / pink / indigo strong shades → mapped to sky-blue palette */
-.bg-purple-500, .bg-purple-600, .bg-purple-700, .bg-purple-800,
-.bg-indigo-500, .bg-indigo-600, .bg-indigo-700, .bg-indigo-800,
-.bg-pink-500, .bg-pink-600, .bg-pink-700, .bg-pink-800,
-.bg-violet-500, .bg-violet-600, .bg-violet-700, .bg-violet-800,
-.bg-fuchsia-500, .bg-fuchsia-600, .bg-fuchsia-700 {
+body:not(.pr-user-dark) .bg-purple-500, body:not(.pr-user-dark) .bg-purple-600, body:not(.pr-user-dark) .bg-purple-700, body:not(.pr-user-dark) .bg-purple-800, body:not(.pr-user-dark) .bg-indigo-500, body:not(.pr-user-dark) .bg-indigo-600, body:not(.pr-user-dark) .bg-indigo-700, body:not(.pr-user-dark) .bg-indigo-800, body:not(.pr-user-dark) .bg-pink-500, body:not(.pr-user-dark) .bg-pink-600, body:not(.pr-user-dark) .bg-pink-700, body:not(.pr-user-dark) .bg-pink-800, body:not(.pr-user-dark) .bg-violet-500, body:not(.pr-user-dark) .bg-violet-600, body:not(.pr-user-dark) .bg-violet-700, body:not(.pr-user-dark) .bg-violet-800, body:not(.pr-user-dark) .bg-fuchsia-500, body:not(.pr-user-dark) .bg-fuchsia-600, body:not(.pr-user-dark) .bg-fuchsia-700 {
   background-color: #246BCE !important; /* Sky-blue action */
   color: #FFFFFF !important;
 }
-.from-purple-500, .from-purple-600, .from-purple-700,
-.from-indigo-500, .from-indigo-600, .from-indigo-700,
-.from-pink-500, .from-pink-600, .from-pink-700,
-.from-violet-500, .from-violet-600, .from-fuchsia-500, .from-fuchsia-600 {
+body:not(.pr-user-dark) .from-purple-500, body:not(.pr-user-dark) .from-purple-600, body:not(.pr-user-dark) .from-purple-700, body:not(.pr-user-dark) .from-indigo-500, body:not(.pr-user-dark) .from-indigo-600, body:not(.pr-user-dark) .from-indigo-700, body:not(.pr-user-dark) .from-pink-500, body:not(.pr-user-dark) .from-pink-600, body:not(.pr-user-dark) .from-pink-700, body:not(.pr-user-dark) .from-violet-500, body:not(.pr-user-dark) .from-violet-600, body:not(.pr-user-dark) .from-fuchsia-500, body:not(.pr-user-dark) .from-fuchsia-600 {
   --tw-gradient-from: #93C5FD var(--tw-gradient-from-position) !important;
 }
-.to-purple-500, .to-purple-600, .to-purple-700,
-.to-indigo-500, .to-indigo-600, .to-indigo-700,
-.to-pink-500, .to-pink-600, .to-pink-700,
-.to-violet-500, .to-violet-600, .to-fuchsia-500, .to-fuchsia-600 {
+body:not(.pr-user-dark) .to-purple-500, body:not(.pr-user-dark) .to-purple-600, body:not(.pr-user-dark) .to-purple-700, body:not(.pr-user-dark) .to-indigo-500, body:not(.pr-user-dark) .to-indigo-600, body:not(.pr-user-dark) .to-indigo-700, body:not(.pr-user-dark) .to-pink-500, body:not(.pr-user-dark) .to-pink-600, body:not(.pr-user-dark) .to-pink-700, body:not(.pr-user-dark) .to-violet-500, body:not(.pr-user-dark) .to-violet-600, body:not(.pr-user-dark) .to-fuchsia-500, body:not(.pr-user-dark) .to-fuchsia-600 {
   --tw-gradient-to: #246BCE var(--tw-gradient-to-position) !important;
 }
-.via-purple-500, .via-purple-600, .via-indigo-500, .via-indigo-600,
-.via-pink-500, .via-pink-600, .via-violet-500, .via-fuchsia-500 {
+body:not(.pr-user-dark) .via-purple-500, body:not(.pr-user-dark) .via-purple-600, body:not(.pr-user-dark) .via-indigo-500, body:not(.pr-user-dark) .via-indigo-600, body:not(.pr-user-dark) .via-pink-500, body:not(.pr-user-dark) .via-pink-600, body:not(.pr-user-dark) .via-violet-500, body:not(.pr-user-dark) .via-fuchsia-500 {
   --tw-gradient-via: #60A5FA var(--tw-gradient-via-position) !important;
 }
-.text-purple-400, .text-purple-500, .text-purple-600,
-.text-indigo-400, .text-indigo-500, .text-indigo-600,
-.text-pink-400, .text-pink-500, .text-pink-600,
-.text-violet-400, .text-violet-500 {
+body:not(.pr-user-dark) .text-purple-400, body:not(.pr-user-dark) .text-purple-500, body:not(.pr-user-dark) .text-purple-600, body:not(.pr-user-dark) .text-indigo-400, body:not(.pr-user-dark) .text-indigo-500, body:not(.pr-user-dark) .text-indigo-600, body:not(.pr-user-dark) .text-pink-400, body:not(.pr-user-dark) .text-pink-500, body:not(.pr-user-dark) .text-pink-600, body:not(.pr-user-dark) .text-violet-400, body:not(.pr-user-dark) .text-violet-500 {
   color: #246BCE !important;
 }
 
 /* Emerald / teal (existing success color) — keep aligned to mint-green */
-.text-emerald-400, .text-emerald-500, .text-teal-400, .text-teal-500,
-.text-green-400, .text-green-500 {
+body:not(.pr-user-dark) .text-emerald-400, body:not(.pr-user-dark) .text-emerald-500, body:not(.pr-user-dark) .text-teal-400, body:not(.pr-user-dark) .text-teal-500, body:not(.pr-user-dark) .text-green-400, body:not(.pr-user-dark) .text-green-500 {
   color: #075C3B !important; /* Brand green */
 }
 
 /* Amber / gold accents (existing brand) — remap to sky blue action */
-.text-amber-400, .text-amber-500, .text-amber-600, .text-yellow-400, .text-yellow-500 {
+body:not(.pr-user-dark) .text-amber-400, body:not(.pr-user-dark) .text-amber-500, body:not(.pr-user-dark) .text-amber-600, body:not(.pr-user-dark) .text-yellow-400, body:not(.pr-user-dark) .text-yellow-500 {
   color: #9A7215 !important; /* Premium gold, darkened for light surfaces */
 }
-.bg-amber-500, .bg-amber-600, .bg-yellow-500 {
+body:not(.pr-user-dark) .bg-amber-500, body:not(.pr-user-dark) .bg-amber-600, body:not(.pr-user-dark) .bg-yellow-500 {
   background-color: #D6A638 !important;
   color: #20252D !important;
 }
-.from-amber-500, .from-yellow-500 {
+body:not(.pr-user-dark) .from-amber-500, body:not(.pr-user-dark) .from-yellow-500 {
   --tw-gradient-from: #60A5FA var(--tw-gradient-from-position) !important;
 }
-.to-amber-600, .to-yellow-600 {
+body:not(.pr-user-dark) .to-amber-600, body:not(.pr-user-dark) .to-yellow-600 {
   --tw-gradient-to: #246BCE var(--tw-gradient-to-position) !important;
 }
-.border-amber-500, .border-amber-500\/30, .border-amber-500\/40 {
+body:not(.pr-user-dark) .border-amber-500, body:not(.pr-user-dark) .border-amber-500\/30, body:not(.pr-user-dark) .border-amber-500\/40 {
   border-color: rgba(214, 166, 56, 0.45) !important;
 }
-.bg-amber-500\/10, .bg-amber-500\/20 {
+body:not(.pr-user-dark) .bg-amber-500\/10, body:not(.pr-user-dark) .bg-amber-500\/20 {
   background-color: rgba(214, 166, 56, 0.12) !important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   USER APP DARK THEME (Oct 2026) — body.pr-user-dark (set for non-admin routes)
+   Near-black canvas, layered charcoal surfaces, vivid violet primary,
+   premium gold + emerald accents. Admin keeps its own look.
+   ─────────────────────────────────────────────────────────────────── */
+body.pr-user-dark {
+  --pr-green:      #2DD4A0;
+  --pr-blue:       #8B5CF6;
+  --pr-blue-hover: #7C3AED;
+  --pr-gold:       #F5C451;
+  --pr-ivory:      #0A0A0E;
+  --pr-pale:       #16161D;
+  --pr-surface:    #17171E;
+  --pr-surface-2:  #202029;
+  --pr-charcoal:   #121218;
+  --pr-ink:        #F4F4F7;
+  --pr-line:       #2A2A35;
+
+  --paras-obsidian:      #0A0A0E;
+  --paras-obsidian-deep: #16161D;
+  --paras-slate:         #17171E;
+  --paras-slate-alt:     #1D1D26;
+  --paras-slate-line:    #2A2A35;
+  --paras-slate-track:   #262631;
+  --paras-gold:          #8B5CF6;
+  --paras-gold-warm:     #A78BFA;
+  --paras-gold-border:   rgba(139, 92, 246, 0.35);
+  --paras-gold-deep:     #FFFFFF;
+  --paras-mint:          #2DD4A0;
+  --paras-red:           #F87171;
+  --paras-text:           #F4F4F7;
+  --paras-text-secondary: #2DD4A0;
+  --paras-text-mute:      #A1A1AE;
+  --paras-shadow-card: 0 10px 28px -16px rgba(0, 0, 0, 0.9);
+  --paras-shadow-gold: 0 0 22px -6px rgba(139, 92, 246, 0.55);
+
+  background-color: #0A0A0E;
+  color: #F4F4F7;
+}
+body.pr-user-dark .pr-card { background: var(--pr-surface); border-color: var(--pr-line); }
+body.pr-user-dark .btn-paras-gold, body.pr-user-dark .btn-pr-primary {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%) !important;
+  border-color: #7C3AED; box-shadow: 0 8px 20px -10px rgba(139, 92, 246, 0.8);
+}
+body.pr-user-dark .pr-btn-disabled { background: #22222B !important; color: #71717F !important; border-color: #3A3A46 !important; }
+/* Light utility classes used by newer pages → dark surfaces + light text */
+body.pr-user-dark .bg-white, body.pr-user-dark .bg-gray-50, body.pr-user-dark .bg-slate-50 { background-color: var(--pr-surface) !important; }
+body.pr-user-dark .bg-gray-100, body.pr-user-dark .bg-slate-100, body.pr-user-dark .bg-gray-200, body.pr-user-dark .bg-slate-200 { background-color: var(--pr-surface-2) !important; }
+body.pr-user-dark .text-slate-900, body.pr-user-dark .text-gray-900, body.pr-user-dark .text-slate-800, body.pr-user-dark .text-gray-800,
+body.pr-user-dark .text-slate-700, body.pr-user-dark .text-gray-700, body.pr-user-dark .text-black { color: #F4F4F7 !important; }
+body.pr-user-dark .text-slate-600, body.pr-user-dark .text-gray-600, body.pr-user-dark .text-slate-500, body.pr-user-dark .text-gray-500 { color: #A1A1AE !important; }
+body.pr-user-dark .text-slate-400, body.pr-user-dark .text-gray-400 { color: #8C8C99 !important; }
+body.pr-user-dark .border-gray-100, body.pr-user-dark .border-gray-200, body.pr-user-dark .border-gray-300,
+body.pr-user-dark .border-slate-100, body.pr-user-dark .border-slate-200, body.pr-user-dark .border-slate-300 { border-color: var(--pr-line) !important; }
+body.pr-user-dark .bg-yellow-50\/30, body.pr-user-dark .bg-yellow-50 { background-color: rgba(245, 196, 81, 0.08) !important; }
+body.pr-user-dark .bg-emerald-100 { background-color: rgba(45, 212, 160, 0.15) !important; }
+body.pr-user-dark .text-emerald-700 { color: #2DD4A0 !important; }
+body.pr-user-dark .bg-yellow-100 { background-color: rgba(245, 196, 81, 0.15) !important; }
+body.pr-user-dark .text-yellow-700, body.pr-user-dark .text-amber-700 { color: #F5C451 !important; }
+body.pr-user-dark input:not([type=checkbox]):not([type=radio]), body.pr-user-dark textarea, body.pr-user-dark select {
+  color-scheme: dark;
+}
+body.pr-user-dark .bg-white\/90, body.pr-user-dark .bg-white\/80, body.pr-user-dark .bg-white\/95, body.pr-user-dark .bg-white\/70 { background-color: rgba(23, 23, 30, 0.92) !important; }
+body.pr-user-dark .from-indigo-50, body.pr-user-dark .from-purple-50, body.pr-user-dark .from-pink-50, body.pr-user-dark .from-blue-50, body.pr-user-dark .from-emerald-50, body.pr-user-dark .from-amber-50 {
+  --tw-gradient-from: #0A0A0E var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(10, 10, 14, 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+body.pr-user-dark .via-purple-50, body.pr-user-dark .via-pink-50, body.pr-user-dark .via-indigo-50, body.pr-user-dark .via-blue-50 {
+  --tw-gradient-stops: var(--tw-gradient-from), #14101F var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+body.pr-user-dark .to-pink-50, body.pr-user-dark .to-indigo-50, body.pr-user-dark .to-purple-50, body.pr-user-dark .to-blue-50, body.pr-user-dark .to-emerald-50, body.pr-user-dark .to-amber-50 {
+  --tw-gradient-to: #0A0A0E var(--tw-gradient-to-position) !important;
+}
+body.pr-user-dark .border-gray-400, body.pr-user-dark .border-slate-400 { border-color: #3A3A46 !important; }
+body.pr-user-dark .bg-\[\#246BCE\] { background-color: #7C3AED !important; border-color: #7C3AED !important; }
+body.pr-user-dark .text-\[\#7FB0F5\] { color: #A78BFA !important; }
+body.pr-user-dark ::selection { background: rgba(139, 92, 246, 0.45); color: #FFFFFF; }
 
 /* Convenience utilities so we don't spread hex codes across JSX */
 .bg-paras-app        { background-color: var(--paras-obsidian); }
@@ -225,23 +270,23 @@
 }
 
 /* Light pages originally designed dark (Refer & Earn): remap pale accent text + translucent surfaces */
-.pr-light-scope { background: var(--pr-ivory); color: var(--pr-ink); }
-.pr-light-scope .text-amber-100, .pr-light-scope .text-amber-200, .pr-light-scope .text-amber-300,
-.pr-light-scope .text-yellow-200, .pr-light-scope .text-yellow-300, .pr-light-scope .text-orange-200, .pr-light-scope .text-orange-300 { color: #9A7215 !important; }
-.pr-light-scope .text-emerald-100, .pr-light-scope .text-emerald-200, .pr-light-scope .text-emerald-200\/80, .pr-light-scope .text-emerald-300,
-.pr-light-scope .text-green-200, .pr-light-scope .text-green-300, .pr-light-scope .text-lime-300, .pr-light-scope .text-teal-300 { color: var(--pr-green) !important; }
-.pr-light-scope .text-rose-100, .pr-light-scope .text-rose-200, .pr-light-scope .text-rose-300, .pr-light-scope .text-red-300, .pr-light-scope .text-pink-300 { color: #B4234A !important; }
-.pr-light-scope .text-fuchsia-200, .pr-light-scope .text-fuchsia-300, .pr-light-scope .text-purple-300, .pr-light-scope .text-indigo-300 { color: #5B3FB8 !important; }
-.pr-light-scope .text-cyan-100, .pr-light-scope .text-cyan-300, .pr-light-scope .text-sky-200, .pr-light-scope .text-sky-300,
-.pr-light-scope .text-blue-100, .pr-light-scope .text-blue-300 { color: var(--pr-blue) !important; }
-.pr-light-scope .bg-white\/5, .pr-light-scope .bg-slate-500\/15 { background-color: #F4F7FB !important; }
-.pr-light-scope .bg-black\/30, .pr-light-scope .bg-black\/40 { background-color: var(--pr-pale) !important; }
-.pr-light-scope .border-white\/5, .pr-light-scope .border-white\/10, .pr-light-scope .border-white\/20 { border-color: var(--pr-line) !important; }
-.pr-light-scope .ring-white\/10 { --tw-ring-color: var(--pr-line) !important; }
-.pr-light-scope .text-white\/70, .pr-light-scope .text-white\/80, .pr-light-scope .text-white\/90 { color: var(--pr-ink) !important; }
-.pr-light-scope .text-blue-400 { color: var(--pr-blue) !important; }
-.pr-light-scope .text-indigo-400 { color: #5B3FB8 !important; }
-.pr-light-scope .bg-gradient-to-br > svg.text-white, .pr-light-scope .bg-gradient-to-r > svg.text-white { color: #FFFFFF !important; }
+body:not(.pr-user-dark) .pr-light-scope { background: var(--pr-ivory); color: var(--pr-ink); }
+body:not(.pr-user-dark) .pr-light-scope .text-amber-100, body:not(.pr-user-dark) .pr-light-scope .text-amber-200, body:not(.pr-user-dark) .pr-light-scope .text-amber-300,
+body:not(.pr-user-dark) .pr-light-scope .text-yellow-200, body:not(.pr-user-dark) .pr-light-scope .text-yellow-300, body:not(.pr-user-dark) .pr-light-scope .text-orange-200, body:not(.pr-user-dark) .pr-light-scope .text-orange-300 { color: #9A7215 !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-emerald-100, body:not(.pr-user-dark) .pr-light-scope .text-emerald-200, body:not(.pr-user-dark) .pr-light-scope .text-emerald-200\/80, body:not(.pr-user-dark) .pr-light-scope .text-emerald-300,
+body:not(.pr-user-dark) .pr-light-scope .text-green-200, body:not(.pr-user-dark) .pr-light-scope .text-green-300, body:not(.pr-user-dark) .pr-light-scope .text-lime-300, body:not(.pr-user-dark) .pr-light-scope .text-teal-300 { color: var(--pr-green) !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-rose-100, body:not(.pr-user-dark) .pr-light-scope .text-rose-200, body:not(.pr-user-dark) .pr-light-scope .text-rose-300, body:not(.pr-user-dark) .pr-light-scope .text-red-300, body:not(.pr-user-dark) .pr-light-scope .text-pink-300 { color: #B4234A !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-fuchsia-200, body:not(.pr-user-dark) .pr-light-scope .text-fuchsia-300, body:not(.pr-user-dark) .pr-light-scope .text-purple-300, body:not(.pr-user-dark) .pr-light-scope .text-indigo-300 { color: #5B3FB8 !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-cyan-100, body:not(.pr-user-dark) .pr-light-scope .text-cyan-300, body:not(.pr-user-dark) .pr-light-scope .text-sky-200, body:not(.pr-user-dark) .pr-light-scope .text-sky-300,
+body:not(.pr-user-dark) .pr-light-scope .text-blue-100, body:not(.pr-user-dark) .pr-light-scope .text-blue-300 { color: var(--pr-blue) !important; }
+body:not(.pr-user-dark) .pr-light-scope .bg-white\/5, body:not(.pr-user-dark) .pr-light-scope .bg-slate-500\/15 { background-color: #F4F7FB !important; }
+body:not(.pr-user-dark) .pr-light-scope .bg-black\/30, body:not(.pr-user-dark) .pr-light-scope .bg-black\/40 { background-color: var(--pr-pale) !important; }
+body:not(.pr-user-dark) .pr-light-scope .border-white\/5, body:not(.pr-user-dark) .pr-light-scope .border-white\/10, body:not(.pr-user-dark) .pr-light-scope .border-white\/20 { border-color: var(--pr-line) !important; }
+body:not(.pr-user-dark) .pr-light-scope .ring-white\/10 { --tw-ring-color: var(--pr-line) !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-white\/70, body:not(.pr-user-dark) .pr-light-scope .text-white\/80, body:not(.pr-user-dark) .pr-light-scope .text-white\/90 { color: var(--pr-ink) !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-blue-400 { color: var(--pr-blue) !important; }
+body:not(.pr-user-dark) .pr-light-scope .text-indigo-400 { color: #5B3FB8 !important; }
+body:not(.pr-user-dark) .pr-light-scope .bg-gradient-to-br > svg.text-white, body:not(.pr-user-dark) .pr-light-scope .bg-gradient-to-r > svg.text-white { color: #FFFFFF !important; }
 
 .pr-on-solid, .pr-on-solid * { color: #FFFFFF !important; }
 

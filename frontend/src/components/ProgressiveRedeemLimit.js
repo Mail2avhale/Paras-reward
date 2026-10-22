@@ -7,8 +7,8 @@ import { API } from '../lib/api';
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 const Row = ({ label, value, testId, valueColor, strong }) => (
-  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: strong ? '#ECFDF5' : '#FFFFFF', border: '1px solid #D1FAE5' }}>
-    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: strong ? '#14532D' : '#4B5563' }}>{label}</span>
+  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: strong ? 'rgba(45, 212, 160, 0.10)' : '#FFFFFF', border: '1px solid var(--pr-line)' }}>
+    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: strong ? 'var(--pr-green)' : 'var(--paras-text-mute)' }}>{label}</span>
     <span data-testid={testId} className={`${strong ? 'text-base' : 'text-sm'} font-extrabold tabular-nums`} style={{ color: valueColor }}>{value}</span>
   </div>
 );
@@ -40,9 +40,9 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
 
   if (loading) {
     return (
-      <div data-testid="progressive-redeem-limit-loading" className="rounded-2xl p-4 animate-pulse" style={{ background: '#F0FDF4', border: '1px solid #D1FAE5' }}>
-        <div className="h-4 rounded w-1/2 mb-3" style={{ background: '#D1FAE5' }}></div>
-        <div className="h-8 rounded w-full" style={{ background: '#D1FAE5' }}></div>
+      <div data-testid="progressive-redeem-limit-loading" className="rounded-2xl p-4 animate-pulse" style={{ background: 'var(--pr-surface)', border: '1px solid var(--pr-line)' }}>
+        <div className="h-4 rounded w-1/2 mb-3" style={{ background: 'var(--pr-surface-2)' }}></div>
+        <div className="h-8 rounded w-full" style={{ background: 'var(--pr-surface-2)' }}></div>
       </div>
     );
   }
@@ -60,31 +60,31 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
     <div
       data-testid="progressive-redeem-limit"
       className="rounded-2xl p-5"
-      style={{ background: 'linear-gradient(145deg, #F0FDF4 0%, #FEFCE8 55%, #F0F9FF 100%)', border: '1px solid #BBF7D0', boxShadow: '0 10px 28px -12px rgba(22, 101, 52, 0.25)' }}
+      style={{ background: 'linear-gradient(145deg, #1A1530 0%, #17171E 60%)', border: '1px solid var(--pr-line)', boxShadow: 'var(--paras-shadow-card)' }}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: '#14532D' }}>
+        <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--pr-green)' }}>
           <Zap className="h-4 w-4" style={{ color: '#CA8A04' }} />
           Redeem Limit
         </h3>
-        <span data-testid="progressive-rate-badge" className="px-2.5 py-1 rounded-full text-xs font-extrabold tabular-nums" style={{ background: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE68A' }}>
+        <span data-testid="progressive-rate-badge" className="px-2.5 py-1 rounded-full text-xs font-extrabold tabular-nums" style={{ background: 'rgba(245, 196, 81, 0.15)', color: 'var(--pr-gold)', border: '1px solid rgba(245, 196, 81, 0.4)' }}>
           {rate} PRC = ₹1
         </span>
       </div>
 
-      <p className="text-[11px] mb-3 leading-snug" style={{ color: '#4B5563' }}>
+      <p className="text-[11px] mb-3 leading-snug" style={{ color: 'var(--paras-text-mute)' }}>
         One shared limit for Recharge, Bill Payments &amp; Redeem to Bank
       </p>
 
       <div className="mb-4">
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: '#DCFCE7' }}>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--pr-surface-2)' }}>
           <div
             data-testid="progressive-progress-bar"
             className="h-full rounded-full transition-[width] duration-700"
             style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #22C55E, #38BDF8)' }}
           />
         </div>
-        <div className="flex justify-between mt-1 text-[10px] font-medium" style={{ color: '#6B7280' }}>
+        <div className="flex justify-between mt-1 text-[10px] font-medium" style={{ color: 'var(--paras-text-mute)' }}>
           <span>0 PRC</span>
           <span>Cycle resets in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}</span>
         </div>

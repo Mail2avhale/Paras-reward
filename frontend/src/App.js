@@ -691,6 +691,11 @@ import { API, BACKEND_URL } from "./lib/api";
 // Google sign-in return: session_id arrives in the URL fragment; must be read via useLocation (reactive)
 function GoogleAuthGate({ onLogin, children }) {
   const location = useLocation();
+  // User app = dark theme; admin routes keep their own light look
+  useEffect(() => {
+    const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/manager');
+    document.body.classList.toggle('pr-user-dark', !isAdmin);
+  }, [location.pathname]);
   if (location.hash?.includes('session_id=')) {
     return <GoogleAuthCallback onLogin={onLogin} />;
   }

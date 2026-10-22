@@ -26,7 +26,7 @@ export const GoogleSignInButton = ({ label = 'Continue with Google', testId = 'g
       disabled={redirecting}
       data-testid={testId}
       className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition-[background-color,transform] active:scale-[0.98] disabled:opacity-70"
-      style={{ background: '#FFFFFF', color: '#263238', border: '1px solid #D5DAE1', boxShadow: '0 2px 8px -4px rgba(32, 37, 45, 0.25)' }}
+      style={{ background: 'var(--pr-surface-2)', color: 'var(--pr-ink)', border: '1px solid var(--pr-line)', boxShadow: '0 2px 8px -4px rgba(32, 37, 45, 0.25)' }}
     >
       {redirecting ? (
         <span className="h-4 w-4 rounded-full border-2 border-[#246BCE] border-t-transparent animate-spin" />

@@ -50,7 +50,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
   if (isComplete) return null;
 
   return (
-    <Card className="p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid #C7D9F3', borderRadius: 'var(--pr-radius)', boxShadow: 'var(--paras-shadow-card)' }} data-testid="profile-completion-card">
+    <Card className="p-4 mb-4" style={{ background: 'var(--pr-pale)', border: '1px solid var(--pr-line)', borderRadius: 'var(--pr-radius)', boxShadow: 'var(--paras-shadow-card)' }} data-testid="profile-completion-card">
       <div className="flex items-center gap-3">
         {/* Progress Ring */}
         <div className="relative flex-shrink-0">
@@ -99,7 +99,7 @@ export const ProfileCompletionRing = ({ user, userData, onComplete }) => {
             {incompleteChecks.slice(0, 3).map(check => (
               <span 
                 key={check.id}
-                className="px-2 py-0.5 text-[10px] font-medium rounded-full flex items-center gap-1" style={{ background: '#FFFFFF', color: 'var(--pr-ink)', border: '1px solid #C7D9F3' }}
+                className="px-2 py-0.5 text-[10px] font-medium rounded-full flex items-center gap-1" style={{ background: 'var(--pr-surface-2)', color: 'var(--pr-ink)', border: '1px solid var(--pr-line)' }}
               >
                 <check.icon className="w-3 h-3" />
                 {check.label}
@@ -216,7 +216,7 @@ export const ProfileFloatingReminder = ({ user, userData, onDismiss }) => {
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
         className="fixed bottom-24 left-4 right-4 z-40"
       >
-        <Card className="p-3 shadow-xl" style={{ background: '#FFFFFF', border: '1px solid var(--pr-line)', borderRadius: 'var(--pr-radius)' }}>
+        <Card className="p-3 shadow-xl" style={{ background: 'var(--pr-surface-2)', border: '1px solid var(--pr-line)', borderRadius: 'var(--pr-radius)' }}>
           <div className="flex items-center gap-3">
             {/* Avatar */}
             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--pr-green)' }}>

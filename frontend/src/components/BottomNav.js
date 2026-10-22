@@ -42,8 +42,8 @@ const BottomNav = () => {
       <div
         className="border-t"
         style={{
-          backgroundColor: 'var(--pr-charcoal)',
-          borderTopColor: '#353C47',
+          backgroundColor: '#0F0F14',
+          borderTopColor: '#22222C',
         }}
       >
         <div className="max-w-xl mx-auto">
@@ -72,8 +72,8 @@ const BottomNav = () => {
                     <span
                       className="absolute -top-px w-8 h-[3px] rounded-full"
                       style={{
-                        background: 'var(--pr-gold)',
-                        boxShadow: '0 0 10px rgba(214, 166, 56, 0.55)',
+                        background: 'linear-gradient(90deg, #A78BFA, #7C3AED)',
+                        boxShadow: '0 0 12px rgba(139, 92, 246, 0.7)',
                       }}
                     />
                   )}
@@ -82,14 +82,14 @@ const BottomNav = () => {
                   <div
                     className="relative flex items-center justify-center w-10 h-10 rounded-2xl transition-[background-color,box-shadow] duration-300"
                     style={{
-                      backgroundColor: isActive ? 'rgba(214, 166, 56, 0.14)' : 'transparent',
-                      boxShadow: isActive ? 'inset 0 0 0 1px rgba(214, 166, 56, 0.4)' : 'none',
+                      backgroundColor: isActive ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                      boxShadow: isActive ? 'inset 0 0 0 1px rgba(167, 139, 250, 0.45)' : 'none',
                     }}
                   >
                     <Icon
                       className="transition-colors duration-300"
                       style={{
-                        color: isActive ? 'var(--pr-gold)' : '#8A94A3',
+                        color: isActive ? '#FFFFFF' : '#8A8A98',
                         width: 22,
                         height: 22,
                       }}
@@ -103,7 +103,7 @@ const BottomNav = () => {
                   <span
                     className="text-[10px] mt-0.5 tracking-wide transition-colors duration-300"
                     style={{
-                      color: isActive ? 'var(--pr-gold)' : '#8A94A3',
+                      color: isActive ? '#FFFFFF' : '#8A8A98',
                       fontWeight: isActive ? 700 : 500,
                     }}
                   >
