@@ -7,7 +7,7 @@ import { API } from '../lib/api';
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 const Row = ({ label, value, testId, valueColor, strong }) => (
-  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: strong ? 'rgba(45, 212, 160, 0.10)' : '#FFFFFF', border: '1px solid var(--pr-line)' }}>
+  <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: strong ? 'rgba(45, 212, 160, 0.10)' : 'var(--pr-surface-2)', border: '1px solid var(--pr-line)' }}>
     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: strong ? 'var(--pr-green)' : 'var(--paras-text-mute)' }}>{label}</span>
     <span data-testid={testId} className={`${strong ? 'text-base' : 'text-sm'} font-extrabold tabular-nums`} style={{ color: valueColor }}>{value}</span>
   </div>

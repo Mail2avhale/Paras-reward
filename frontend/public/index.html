@@ -214,9 +214,11 @@
         animation: spin 1s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
+      body.pr-user-dark, body.pr-user-dark .initial-loader { background: #0A0A0E; }
     </style>
   </head>
   <body>
+    <script>if(!/^\/(admin|manager)/.test(location.pathname)){document.body.classList.add('pr-user-dark');}</script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
 
     <!--

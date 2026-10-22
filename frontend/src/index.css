@@ -214,15 +214,118 @@ body.pr-user-dark .from-indigo-50, body.pr-user-dark .from-purple-50, body.pr-us
   --tw-gradient-to: rgba(10, 10, 14, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
-body.pr-user-dark .via-purple-50, body.pr-user-dark .via-pink-50, body.pr-user-dark .via-indigo-50, body.pr-user-dark .via-blue-50 {
+body.pr-user-dark .via-orange-50, body.pr-user-dark .via-rose-50, body.pr-user-dark .via-amber-50, body.pr-user-dark .via-purple-50, body.pr-user-dark .via-pink-50, body.pr-user-dark .via-indigo-50, body.pr-user-dark .via-blue-50 {
   --tw-gradient-stops: var(--tw-gradient-from), #14101F var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
 }
-body.pr-user-dark .to-pink-50, body.pr-user-dark .to-indigo-50, body.pr-user-dark .to-purple-50, body.pr-user-dark .to-blue-50, body.pr-user-dark .to-emerald-50, body.pr-user-dark .to-amber-50 {
+body.pr-user-dark .to-rose-50, body.pr-user-dark .to-orange-50, body.pr-user-dark .to-pink-50, body.pr-user-dark .to-indigo-50, body.pr-user-dark .to-purple-50, body.pr-user-dark .to-blue-50, body.pr-user-dark .to-emerald-50, body.pr-user-dark .to-amber-50 {
   --tw-gradient-to: #0A0A0E var(--tw-gradient-to-position) !important;
 }
 body.pr-user-dark .border-gray-400, body.pr-user-dark .border-slate-400 { border-color: #3A3A46 !important; }
 body.pr-user-dark .bg-\[\#246BCE\] { background-color: #7C3AED !important; border-color: #7C3AED !important; }
 body.pr-user-dark .text-\[\#7FB0F5\] { color: #A78BFA !important; }
+/* shadcn tokens (Card, Dialog, Popover, Select, Sheet) */
+body.pr-user-dark {
+  --background: 240 17% 4%;
+  --foreground: 240 10% 96%;
+  --card: 240 13% 10%;
+  --card-foreground: 240 10% 96%;
+  --popover: 240 13% 10%;
+  --popover-foreground: 240 10% 96%;
+  --muted: 240 12% 15%;
+  --muted-foreground: 240 6% 65%;
+  --accent: 240 12% 15%;
+  --accent-foreground: 240 10% 96%;
+  --secondary: 240 12% 15%;
+  --secondary-foreground: 240 10% 96%;
+  --border: 240 12% 19%;
+  --input: 240 12% 22%;
+}
+/* Dark text must stay dark on bright chips (solid amber / yellow / orange) */
+body.pr-user-dark .bg-amber-400 .text-slate-900,
+body.pr-user-dark .bg-amber-400.text-slate-900,
+body.pr-user-dark .bg-amber-400 .text-black,
+body.pr-user-dark .bg-amber-400.text-black,
+body.pr-user-dark .bg-amber-400 .text-gray-900,
+body.pr-user-dark .bg-amber-400.text-gray-900,
+body.pr-user-dark .bg-amber-500 .text-slate-900,
+body.pr-user-dark .bg-amber-500.text-slate-900,
+body.pr-user-dark .bg-amber-500 .text-black,
+body.pr-user-dark .bg-amber-500.text-black,
+body.pr-user-dark .bg-amber-500 .text-gray-900,
+body.pr-user-dark .bg-amber-500.text-gray-900,
+body.pr-user-dark .bg-amber-600 .text-slate-900,
+body.pr-user-dark .bg-amber-600.text-slate-900,
+body.pr-user-dark .bg-amber-600 .text-black,
+body.pr-user-dark .bg-amber-600.text-black,
+body.pr-user-dark .bg-amber-600 .text-gray-900,
+body.pr-user-dark .bg-amber-600.text-gray-900,
+body.pr-user-dark .bg-yellow-400 .text-slate-900,
+body.pr-user-dark .bg-yellow-400.text-slate-900,
+body.pr-user-dark .bg-yellow-400 .text-black,
+body.pr-user-dark .bg-yellow-400.text-black,
+body.pr-user-dark .bg-yellow-400 .text-gray-900,
+body.pr-user-dark .bg-yellow-400.text-gray-900,
+body.pr-user-dark .bg-yellow-500 .text-slate-900,
+body.pr-user-dark .bg-yellow-500.text-slate-900,
+body.pr-user-dark .bg-yellow-500 .text-black,
+body.pr-user-dark .bg-yellow-500.text-black,
+body.pr-user-dark .bg-yellow-500 .text-gray-900,
+body.pr-user-dark .bg-yellow-500.text-gray-900,
+body.pr-user-dark .bg-orange-400 .text-slate-900,
+body.pr-user-dark .bg-orange-400.text-slate-900,
+body.pr-user-dark .bg-orange-400 .text-black,
+body.pr-user-dark .bg-orange-400.text-black,
+body.pr-user-dark .bg-orange-400 .text-gray-900,
+body.pr-user-dark .bg-orange-400.text-gray-900,
+body.pr-user-dark .bg-orange-500 .text-slate-900,
+body.pr-user-dark .bg-orange-500.text-slate-900,
+body.pr-user-dark .bg-orange-500 .text-black,
+body.pr-user-dark .bg-orange-500.text-black,
+body.pr-user-dark .bg-orange-500 .text-gray-900,
+body.pr-user-dark .bg-orange-500.text-gray-900,
+body.pr-user-dark .from-amber-400 .text-slate-900,
+body.pr-user-dark .from-amber-400.text-slate-900,
+body.pr-user-dark .from-amber-400 .text-black,
+body.pr-user-dark .from-amber-400.text-black,
+body.pr-user-dark .from-amber-400 .text-gray-900,
+body.pr-user-dark .from-amber-400.text-gray-900,
+body.pr-user-dark .from-amber-500 .text-slate-900,
+body.pr-user-dark .from-amber-500.text-slate-900,
+body.pr-user-dark .from-amber-500 .text-black,
+body.pr-user-dark .from-amber-500.text-black,
+body.pr-user-dark .from-amber-500 .text-gray-900,
+body.pr-user-dark .from-amber-500.text-gray-900,
+body.pr-user-dark .from-yellow-400 .text-slate-900,
+body.pr-user-dark .from-yellow-400.text-slate-900,
+body.pr-user-dark .from-yellow-400 .text-black,
+body.pr-user-dark .from-yellow-400.text-black,
+body.pr-user-dark .from-yellow-400 .text-gray-900,
+body.pr-user-dark .from-yellow-400.text-gray-900,
+body.pr-user-dark .from-yellow-500 .text-slate-900,
+body.pr-user-dark .from-yellow-500.text-slate-900,
+body.pr-user-dark .from-yellow-500 .text-black,
+body.pr-user-dark .from-yellow-500.text-black,
+body.pr-user-dark .from-yellow-500 .text-gray-900,
+body.pr-user-dark .from-yellow-500.text-gray-900,
+body.pr-user-dark .from-orange-400 .text-slate-900,
+body.pr-user-dark .from-orange-400.text-slate-900,
+body.pr-user-dark .from-orange-400 .text-black,
+body.pr-user-dark .from-orange-400.text-black,
+body.pr-user-dark .from-orange-400 .text-gray-900,
+body.pr-user-dark .from-orange-400.text-gray-900,
+body.pr-user-dark .from-orange-500 .text-slate-900,
+body.pr-user-dark .from-orange-500.text-slate-900,
+body.pr-user-dark .from-orange-500 .text-black,
+body.pr-user-dark .from-orange-500.text-black,
+body.pr-user-dark .from-orange-500 .text-gray-900,
+body.pr-user-dark .from-orange-500.text-gray-900 { color: #1A1205 !important; }
+/* Hard-coded light hex panels */
+body.pr-user-dark .bg-\[\#fafafa\], body.pr-user-dark .bg-\[\#FAFAFA\], body.pr-user-dark .bg-\[\#F4F7FB\],
+body.pr-user-dark .bg-\[\#EDF4FF\], body.pr-user-dark .bg-\[\#ECF6F0\] { background-color: var(--pr-surface-2) !important; }
+body.pr-user-dark .bg-blue-50, body.pr-user-dark .bg-purple-50, body.pr-user-dark .bg-indigo-50, body.pr-user-dark .bg-pink-50,
+body.pr-user-dark .bg-green-50, body.pr-user-dark .bg-emerald-50, body.pr-user-dark .bg-amber-50, body.pr-user-dark .bg-red-50 { background-color: var(--pr-surface-2) !important; }
+body.pr-user-dark .text-slate-300 { color: #C4C4CF !important; }
+body.pr-user-dark [data-testid="create-post-btn"] { background: linear-gradient(135deg, #8B5CF6, #6D28D9) !important; color: #FFFFFF !important; }
 body.pr-user-dark ::selection { background: rgba(139, 92, 246, 0.45); color: #FFFFFF; }
 
 /* Convenience utilities so we don't spread hex codes across JSX */

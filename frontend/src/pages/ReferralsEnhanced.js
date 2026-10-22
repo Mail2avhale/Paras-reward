@@ -257,7 +257,7 @@ const ReferralsEnhanced = ({ user, refreshUserData }) => {
   return (
     <div className="pr-light-scope min-h-screen pb-24" data-testid="referrals-page">
       {/* Header */}
-      <div className="sticky top-0 backdrop-blur-lg border-b z-10" style={{ background: 'rgba(255, 249, 232, 0.95)', borderColor: 'var(--pr-line)' }}>
+      <div className="sticky top-0 backdrop-blur-lg border-b z-10" style={{ background: 'rgba(10, 10, 14, 0.92)', borderColor: 'var(--pr-line)' }}>
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button

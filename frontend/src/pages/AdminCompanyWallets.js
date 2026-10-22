@@ -212,7 +212,7 @@ const AdminCompanyWallets = ({ user }) => {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${String(name ?? '').split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
                 >
                   {wallets.map((entry, index) => (
                     <Cell key={entry.wallet_type} fill={COLORS[index % COLORS.length]} />

@@ -297,7 +297,7 @@ const Notifications = ({ user }) => {
                   notification.type === 'referral_active' ? 'bg-orange-500/20' :
                   'bg-amber-500/20'
                 }`}>
-                  {notification.icon ? (
+                  {notification.icon && !/^[a-z0-9-]+$/i.test(notification.icon) ? (
                     <span className="text-2xl">{notification.icon}</span>
                   ) : (
                     getNotificationIcon(notification.type)
