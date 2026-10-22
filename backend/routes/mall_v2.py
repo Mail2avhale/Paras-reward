@@ -1059,7 +1059,7 @@ async def mining_preview(product_id: str, user: dict = Depends(get_current_user)
     except asyncio.TimeoutError:
         # Feb 27 2026 — cache degraded 60 s so client retries don't loop.
         degraded = {
-            "success": True,
+            "success": False,
             "product_id": product_id,
             "user_network_cap": 0,
             "pricing": None,

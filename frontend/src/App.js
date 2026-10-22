@@ -863,9 +863,11 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
               path="/mall"
               element={user ? (
                 isAdminOrManager(user) ? <Navigate to="/admin/mall" replace /> :
+                <RouteErrorBoundary routeName="mall">
                 <Suspense fallback={<LoadingFallback />}>
                   <ParasMall user={user} onBalanceUpdate={onBalanceUpdate} />
                 </Suspense>
+                </RouteErrorBoundary>
               ) : <Navigate to="/login" />}
             />
             <Route

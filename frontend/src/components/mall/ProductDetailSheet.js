@@ -24,6 +24,7 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewUnavailable, setPreviewUnavailable] = useState(false);
 
   // Multi-image: use product.images[] if present, else fallback to image_url
   const images = (Array.isArray(product?.images) && product.images.length
@@ -34,12 +35,18 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
     if (!open || !product?.product_id) return;
     setImgIdx(0);
     setPreview(null);
+    setPreviewUnavailable(false);
     setPreviewLoading(true);
     (async () => {
       try {
         const r = await axios.get(`${API}/mall/v2/mining-preview/${product.product_id}`);
-        if (r.data?.success) setPreview(r.data);
-      } catch (e) { /* silent — preview is optional */ }
+        // Degraded responses (server timeout) carry pricing/estimates = null — never render those
+        if (r.data?.success && r.data.pricing && r.data.estimates?.slow && r.data.estimates?.typical && r.data.estimates?.fast) {
+          setPreview(r.data);
+        } else {
+          setPreviewUnavailable(true);
+        }
+      } catch (e) { setPreviewUnavailable(true); }
       finally { setPreviewLoading(false); }
     })();
   }, [open, product?.product_id]);
@@ -178,6 +185,11 @@ export default function ProductDetailSheet({ product, open, onClose, onBook }) {
                 {previewLoading && (
                   <div className="mall-detail-preview-skel" data-testid="mall-detail-preview-loading">
                     Estimating your mining timeline…
+                  </div>
+                )}
+                {!previewLoading && previewUnavailable && !preview && (
+                  <div className="mall-detail-preview-skel" data-testid="mall-detail-preview-unavailable">
+                    Mining estimate is busy right now. You can still book — your live mining rate appears in My Bookings.
                   </div>
                 )}
                 {preview && (
