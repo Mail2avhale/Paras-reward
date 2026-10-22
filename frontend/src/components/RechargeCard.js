@@ -265,7 +265,7 @@ const RechargeCard = ({ user, stats }) => {
   };
 
   const prcEstimate = amount && parseInt(amount, 10) > 0
-    ? Math.ceil((parseInt(amount, 10) * 1.2 + 10) * prcRate)
+    ? Math.ceil((parseInt(amount, 10) + 10) * prcRate)
     : 0;
 
   const limitExceeded = limitAvailablePrc != null && amount && parseInt(amount, 10) * prcRate > limitAvailablePrc;
@@ -477,7 +477,10 @@ const RechargeCard = ({ user, stats }) => {
         </div>
         {prcEstimate > 0 && (
           <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-prc-estimate">
-            Estimated: ~{prcEstimate.toLocaleString('en-IN')} PRC (incl. charges)
+            Estimated: ~{prcEstimate.toLocaleString('en-IN')} PRC (incl. ₹10 processing fee)
+          </p>
+          <p className="text-[10px] mt-0.5 pl-1" style={{ color: '#D6A638' }} data-testid="recharge-service-charge-note">
+            + 20% cash service charge (₹{(parseInt(amount, 10) * 0.2).toFixed(2)}) payable after a successful recharge
           </p>
         )}
         {limitAvailablePrc != null && (

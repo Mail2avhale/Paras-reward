@@ -518,6 +518,28 @@ class RechargeRequest(BaseModel):
     billfetchresponse: str = ""  # Required for operators with fetchBill=1
 
 
+async def _raise_recharge_service_charge(txn: dict):
+    """20% cash Redemption Service Charge on a SUCCESSFUL mobile/DTH recharge (replaces the old PRC admin charge)."""
+    try:
+        from routes.redemption_service_charge import create_service_charge_on_success
+        rtype = "dth_recharge" if txn.get("recharge_type") == "dth" else "mobile_recharge"
+        number = str(txn.get("mobile_number") or txn.get("number") or "")
+        await create_service_charge_on_success(
+            user_id=txn["user_id"],
+            redemption_id=txn["request_id"],
+            prc_amount=float(txn.get("prc_required") or float(txn.get("amount_inr") or 0) * 10.0),
+            redemption_type=rtype,
+            details={
+                "recharge_type": txn.get("recharge_type"),
+                "operator": txn.get("operator_name") or txn.get("operator") or "",
+                "number": f"XXXXXX{number[-4:]}" if len(number) >= 4 else number,
+                "recharge_amount_inr": txn.get("amount_inr"),
+            },
+        )
+    except Exception as e:
+        logging.warning(f"[RECHARGE] service charge creation failed for {txn.get('request_id')}: {e}")
+
+
 async def _release_recharge_limit(user_id, request_id=None, tid=None):
     try:
         from app.services.redemption_limit_service import release
@@ -685,6 +707,14 @@ async def initiate_recharge(data: RechargeRequest):
         logging.error(f"[RECHARGE] Step 5b: Charges calculation error: {e}")
         return {"success": False, "message": GENERIC_ERROR, "error_ref": "R05B"}
 
+    # Admin charge removed — replaced by the 20% cash Redemption Service Charge raised on SUCCESS
+    charges = {
+        **charges,
+        "admin_charge_inr": 0.0, "admin_charge_prc": 0.0, "admin_charge_percent": 0,
+        "total_inr": round(charges["total_inr"] - charges.get("admin_charge_inr", 0), 2),
+        "subtotal_inr": round(charges["total_inr"] - charges.get("admin_charge_inr", 0), 2),
+        "total_prc": round(charges["total_prc"] - charges.get("admin_charge_prc", 0), 2),
+    }
     total_prc = charges["total_prc"]
 
     # ===== Step 6: Redeem limit check =====
@@ -877,6 +907,10 @@ async def initiate_recharge(data: RechargeRequest):
     if final_status in ("success", "pending"):
         # CRITICAL: Once Eko confirms success, ALWAYS return success to user.
         # Even if our DB recording fails, the recharge already went through.
+        if final_status == "success":
+            _svc_txn = await db.recharge_transactions.find_one({"request_id": request_id}, {"_id": 0})
+            if _svc_txn:
+                await _raise_recharge_service_charge(_svc_txn)
         try:
             return await _handle_success(
                 data, request_id, client_ref_id, tid, final_status, total_prc,
@@ -1236,7 +1270,7 @@ async def admin_enquiry_status(request_id: str):
     # Find the transaction
     txn = await db.recharge_transactions.find_one(
         {"request_id": request_id},
-        {"_id": 0, "eko_tid": 1, "client_ref_id": 1, "status": 1, "user_id": 1}
+        {"_id": 0}
     )
     if not txn:
         return {"success": False, "error": "Transaction not found"}
@@ -1310,6 +1344,8 @@ async def admin_enquiry_status(request_id: str):
                 {"$set": {"status": bp_status, "eko_tid": eko_data.get("tid"), "updated_at": now_iso}}
             )
             logging.info(f"[RECHARGE] Status updated: {old_status} → {new_status} for {request_id}")
+            if new_status == "success":
+                await _raise_recharge_service_charge(txn)
 
             # Auto-refund PRC when transitioning to failed/refund_pending/refunded from pending
             if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing"):
@@ -1370,7 +1406,7 @@ async def admin_check_all_pending():
 
     pending_txns = await db.recharge_transactions.find(
         {"status": "pending"},
-        {"_id": 0, "request_id": 1, "eko_tid": 1, "client_ref_id": 1, "created_at": 1, "user_id": 1}
+        {"_id": 0}
     ).sort("created_at", -1).limit(50).to_list(50)
 
     if not pending_txns:
@@ -1424,6 +1460,8 @@ async def admin_check_all_pending():
                     {"request_id": req_id},
                     {"$set": update_fields}
                 )
+                if new_status == "success":
+                    await _raise_recharge_service_charge(txn)
                 bp_status = "paid" if new_status == "success" else new_status
                 await db.bill_payment_requests.update_one(
                     {"request_id": req_id},

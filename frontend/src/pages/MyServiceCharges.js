@@ -37,6 +37,8 @@ const ChargeDetails = ({ c }) => {
     <div className="mt-3 pt-2 border-t border-slate-200" data-testid={`svc-details-${c.charge_id}`}>
       <DetailRow label="Type" value={typeLabel(c.redemption_type)} testId={`svc-detail-type-${c.charge_id}`} />
       {d.product_name && <DetailRow label="Product" value={d.product_name} testId={`svc-detail-product-${c.charge_id}`} />}
+      {d.operator && <DetailRow label="Operator" value={d.operator} />}
+      {d.number && <DetailRow label="Number" value={d.number} mono />}
       <DetailRow
         label="Charged on"
         value={isMrp ? `Product MRP ${fmt(c.redemption_value_inr)}` : `${Number(c.prc_amount || 0).toLocaleString('en-IN')} PRC = ${fmt(c.redemption_value_inr)}`}
