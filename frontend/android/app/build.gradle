@@ -347,8 +347,12 @@ android {
         //     - 20% cash service charge on Mobile/DTH recharge (replaces PRC admin charge)
         //       and on Paras Mall delivery (MRP); expandable service-charge history
         //     - Brand palette refresh (Dashboard, Refer & Earn), uploads moved to object storage
-        versionCode 52
-        versionName "1.6.0"
+        // versionCode 52 → 53 — Oct 2026 — v1.6.1
+        //     - Full dark theme for the user app (PhonePe-inspired, violet accents)
+        //     - Mall product detail blank-screen fix, notifications icon fix
+        //     - minSdk 24 (Play automatic protection)
+        versionCode 53
+        versionName "1.6.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).
