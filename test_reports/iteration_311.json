@@ -1,0 +1,38 @@
+{
+  "summary": "Recharge admin-charge to 20% cash Service Charge change, iter 311. Backend: 13/13 in-process pytest pass with Eko HTTP mocked and a temporary TEST user (no real recharge was made). Admin charge is overridden to 0, PRC deducted for ₹199 is 2090 (amount*10 + fee*10), and the pending txn stores admin_charge_prc=0. _raise_recharge_service_charge creates exactly one row (redemption_id=request_id, mobile_recharge or dth_recharge, prc_amount 1990, value ₹199, fee ₹39.80, masked number XXXXXX3210, recharge_amount_inr 199). The call is idempotent, fires on initiate success and on admin-enquiry and bulk-enquiry success, and does not fire for pending, failed, 347, refund_pending or refunded. Frontend: RechargeCard.js did NOT COMPILE because of two adjacent <p> elements under `prcEstimate > 0 && (...)`; the tester wrapped them in a fragment. After that fix the dashboard shows the estimate 'Estimated: ~2,090 PRC (incl. ₹10 processing fee)' and the note '+ 20% cash service charge (₹39.80) payable after a successful recharge'. On the charcoal card (#20252D) the note colour is #D6A638 and the estimate colour is #98A2B0, both readable. /my-service-charges shows a seeded mobile_recharge row with the 'Mobile Recharge' chip, and its details include the Operator (Jio) and Number (XXXXXX3210) rows. The seed was deleted afterwards.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/eko/recharge/initiate (via _raise_recharge_service_charge)", "issue": "The pending recharge_transactions doc stores only operator_id and no operator_name or operator field, so details.operator is '' for charges raised by the initiate path (verified in the test output). MyServiceCharges hides the Operator row when it is empty, so real recharge charges will show no Operator. Fix: add operator_name to RechargeRequest (or look up the name from operator_id) and store it in pending_txn."},
+      {"endpoint": "admin enquiry success -> refunded/refund_pending", "issue": "If a txn that already succeeded later moves to refunded, the service charge stays PENDING and is not cancelled, so it keeps blocking the user's redemptions. Edge case; consider cancelling or reversing the charge on a refund after success."},
+      {"endpoint": "_redemption_type_label", "issue": "Recharge redemption_id values are bare UUIDs and do not match the MOB/RCH/DTH prefixes, so Razorpay/community notes fall back to the generic 'redemption' label. Prefer charge.redemption_type when it is set."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "RechargeCard", "issue": "Adjacent JSX <p> elements without a wrapper caused a webpack/eslint parse error, so the whole app failed to compile. Tester fixed it by wrapping them in <>...</>.", "selector": "[data-testid=recharge-service-charge-note]", "priority": "CRITICAL (fixed)"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "My Service Charges row subtitle", "issues": ["PRC in the row subtitle is not locale-formatted ('1990 PRC') while details show '1,990 PRC'. Cosmetic."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_recharge_service_charge_iter311.py", "/app/test_reports/pytest/pytest_iter311.xml", "/app/tests/seed_iter311.py"],
+  "action_items": [
+    "Store operator_name on recharge_transactions (pending_txn) so the service charge details show the Operator",
+    "Optional: cancel the recharge service charge when a successful txn is later refunded",
+    "Optional: use redemption_type for the Razorpay/community label of recharge charges",
+    "Note: test user 9970100782 (it logs in as uid 76b75808-47fa-48dd-ad7c-8074678e3607, not the uid matched by users.mobile) still has a leftover QA PENDING charge SVC-QA-RZP-1-DD0D203D (₹300, qa_marker razorpay_loader_bug_v142) that blocks its redemptions. The tester did not create it; delete it if it is unwanted."
+  ],
+  "critical_code_review_comments": [
+    "eko_recharge.py is 3000+ lines; split it into modules",
+    "The status-update and auto-refund blocks are duplicated between admin_enquiry_status and admin_check_all_pending; extract a helper",
+    "The charges override is correct: total_prc = amount_prc + processing_fee_prc; bill_payment_requests now records admin_charge_percent 0"
+  ],
+  "updated_files": ["/app/frontend/src/components/RechargeCard.js (fragment wrapper fix)", "/app/backend/tests/test_recharge_service_charge_iter311.py", "/app/tests/seed_iter311.py"],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% after the compile fix"},
+  "seed_data_creation": "TEST_rch_* user, txns and charges were created and auto-cleaned by pytest teardown. Temporary PAID charge SVC-TEST311-MOBRCH was seeded for the UI check and then deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pytest runs in-process: it imports routes.eko_recharge, monkeypatches httpx.AsyncClient, _eko_configured, _ensure_service_activated, redemption_limit_service.ensure_can_spend/reserve/release and the community/sustainability hooks, and injects fake_calc as calculate_charges_func. UI login 9970100782/997010 maps to uid 76b75808-47fa-48dd-ad7c-8074678e3607. Seed script: python /app/tests/seed_iter311.py seed|clean."
+}

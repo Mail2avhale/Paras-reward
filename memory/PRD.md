@@ -1,3 +1,12 @@
+## Shipped (Oct 2026 — Recharge: PRC Admin Charge replaced by 20% Cash Service Charge)
+- Production check (via the deployer, read-only): 0 service-charge rows for recharges. Only elite_subscription, paras_mall_booking and sale_elite_subscription rows existed. Recharges carried an inline ~20% PRC admin charge instead.
+- Mobile/DTH recharge (`routes/eko_recharge.py`): the admin charge is set to 0, so PRC deducted = amount×10 + processing fee. `_raise_recharge_service_charge` creates a 20% cash charge (mobile_recharge / dth_recharge, details: operator, masked number, amount) only on SUCCESS: at initiate, admin enquiry and bulk enquiry. It is idempotent.
+- On refund, a still-PENDING charge becomes CANCELLED. `operator_name` is stored on recharge txns. Labels use redemption_type.
+- RechargeCard shows the new estimate and a "+20% cash service charge" note. MyServiceCharges shows Operator and Number rows and a grey CANCELLED status.
+- BBPS bill payments still use the old PRC admin charge (not requested).
+- Test: iteration_311, backend 13/13 (Eko mocked). The tester fixed a JSX compile bug, and its minor follow-ups were fixed and self-tested afterwards.
+
+
 ## Shipped (Oct 2026 — Paras Mall Delivery Service Charge + Charge Details)
 - Admin mark-delivered now creates a 20% redemption service charge on product MRP (`MALLDLV-{booking_id}`, type `paras_mall_delivery`, `charge_basis: mrp`, details product/mrp/booking). This is in addition to the existing booking-time 20% charge on upfront PRC (user chose to keep both).
 - A pending delivery charge blocks the next redemption, the same as other charges. The user gets a notification.

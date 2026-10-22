@@ -231,6 +231,7 @@ const RechargeCard = ({ user, stats }) => {
         recharge_type: rechargeType,
         number: number.trim(),
         operator_id: selectedOperator,
+        operator_name: operators.find(op => String(op.operator_id ?? op.id) === String(selectedOperator))?.name || '',
         amount: amt
       };
       // Pass billfetchresponse if available (DTH with fetchBill)
@@ -476,12 +477,14 @@ const RechargeCard = ({ user, stats }) => {
           />
         </div>
         {prcEstimate > 0 && (
+          <>
           <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-prc-estimate">
             Estimated: ~{prcEstimate.toLocaleString('en-IN')} PRC (incl. ₹10 processing fee)
           </p>
           <p className="text-[10px] mt-0.5 pl-1" style={{ color: '#D6A638' }} data-testid="recharge-service-charge-note">
             + 20% cash service charge (₹{(parseInt(amount, 10) * 0.2).toFixed(2)}) payable after a successful recharge
           </p>
+          </>
         )}
         {limitAvailablePrc != null && (
           <p className="text-[10px] mt-1 pl-1" style={{ color: '#B4BDC9' }} data-testid="recharge-limit-remaining">

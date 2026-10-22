@@ -514,6 +514,7 @@ class RechargeRequest(BaseModel):
     recharge_type: str
     number: str
     operator_id: str
+    operator_name: str = ""
     amount: float
     billfetchresponse: str = ""  # Required for operators with fetchBill=1
 
@@ -541,6 +542,13 @@ async def _raise_recharge_service_charge(txn: dict):
 
 
 async def _release_recharge_limit(user_id, request_id=None, tid=None):
+    if request_id:
+        # Refunded recharge — its cash service charge (if still unpaid) no longer applies
+        await db.redemption_service_charges.update_one(
+            {"redemption_id": request_id, "status": "PENDING"},
+            {"$set": {"status": "CANCELLED", "cancel_reason": "Recharge refunded",
+                      "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
     try:
         from app.services.redemption_limit_service import release
         await release(db, user_id, f"recharge:{request_id}" if request_id else None, f"recharge:{tid}" if tid else None)
@@ -757,6 +765,7 @@ async def initiate_recharge(data: RechargeRequest):
         "recharge_type": data.recharge_type,
         "number": data.number,
         "operator_id": data.operator_id,
+        "operator_name": (data.operator_name or "")[:60],
         "amount_inr": float(int_amount),
         "total_prc_deducted": round(total_prc, 2),
         "prc_required": round(charges.get("amount_prc", 0), 2),

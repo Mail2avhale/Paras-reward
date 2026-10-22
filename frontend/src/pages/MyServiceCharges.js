@@ -274,7 +274,7 @@ const MyServiceCharges = ({ user }) => {
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{typeLabel(c.redemption_type)}</span>
                     </p>
                     <p className="text-[10px] text-slate-500 truncate">
-                      {(c.created_at || '').slice(0, 10)} · {c.details?.product_name || (c.charge_basis === 'mrp' ? `MRP ${fmt(c.redemption_value_inr)}` : `${c.prc_amount} PRC → ${fmt(c.redemption_value_inr)}`)}
+                      {(c.created_at || '').slice(0, 10)} · {c.details?.product_name || (c.charge_basis === 'mrp' ? `MRP ${fmt(c.redemption_value_inr)}` : `${Number(c.prc_amount || 0).toLocaleString('en-IN')} PRC → ${fmt(c.redemption_value_inr)}`)}
                     </p>
                     <p className="text-[10px] text-slate-400 flex items-center gap-1">
                       {expanded === c.charge_id ? 'Hide details' : 'View details'}
@@ -282,7 +282,7 @@ const MyServiceCharges = ({ user }) => {
                     </p>
                   </button>
                   <div className="text-right shrink-0">
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${c.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${c.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : c.status === 'CANCELLED' ? 'bg-slate-100 text-slate-500' : 'bg-yellow-100 text-yellow-700'}`}>
                       {c.status}
                     </span>
                     {c.status === 'PENDING' && (

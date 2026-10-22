@@ -61,12 +61,14 @@ _REDEMPTION_TYPE_LABELS = {
 }
 
 
-def _redemption_type_label(redemption_id: Optional[str]) -> str:
+def _redemption_type_label(redemption_id: Optional[str], redemption_type: Optional[str] = None) -> str:
     """Best-effort human label for the Community Forum post body.
 
     We first check the ID prefix (fast + no extra DB call). If unknown, we
     fall back to "redemption" — the generic template still reads well.
     """
+    if redemption_type and redemption_type in _REDEMPTION_TYPE_LABELS:
+        return _REDEMPTION_TYPE_LABELS[redemption_type]
     if not redemption_id:
         return "redemption"
     rid = redemption_id.upper()
@@ -204,7 +206,7 @@ async def _reconcile_charge_from_razorpay(charge_id: str) -> Optional[dict]:
         try:
             import asyncio as _asyncio
             from routes.community import create_success_story_post
-            redemption_note = _redemption_type_label(charge.get("redemption_id"))
+            redemption_note = _redemption_type_label(charge.get("redemption_id"), charge.get("redemption_type"))
             _asyncio.create_task(create_success_story_post(
                 user_id=charge["user_id"], service_type="service_charge",
                 amount_inr=float(charge.get("total_payable") or 0),
@@ -621,7 +623,7 @@ async def verify_payment(data: VerifyPaymentRequest):
     try:
         import asyncio as _asyncio
         from routes.community import create_success_story_post
-        redemption_note = _redemption_type_label(fresh.get("redemption_id"))
+        redemption_note = _redemption_type_label(fresh.get("redemption_id"), fresh.get("redemption_type"))
         _asyncio.create_task(create_success_story_post(
             user_id=charge["user_id"],
             service_type="service_charge",
@@ -798,7 +800,7 @@ async def bulk_verify_payment(data: BulkVerifyRequest):
             try:
                 import asyncio as _asyncio
                 from routes.community import create_success_story_post
-                redemption_note = _redemption_type_label(charge.get("redemption_id"))
+                redemption_note = _redemption_type_label(charge.get("redemption_id"), charge.get("redemption_type"))
                 _asyncio.create_task(create_success_story_post(
                     user_id=data.user_id,
                     service_type="service_charge",
@@ -959,7 +961,7 @@ async def admin_manual_paid(data: ManualPaidRequest,
     try:
         import asyncio as _asyncio
         from routes.community import create_success_story_post
-        redemption_note = _redemption_type_label(charge.get("redemption_id"))
+        redemption_note = _redemption_type_label(charge.get("redemption_id"), charge.get("redemption_type"))
         _asyncio.create_task(create_success_story_post(
             user_id=charge["user_id"],
             service_type="service_charge",
