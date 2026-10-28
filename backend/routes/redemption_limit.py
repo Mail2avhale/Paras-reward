@@ -29,6 +29,30 @@ async def redemption_limit_status(user_id: str):
     return await get_status(db, user_id)
 
 
+@router.post("/admin/redemption-limit/recalc-report")
+async def admin_recalc_report(request: Request):
+    """Read-only: users whose limit now pauses during inactive subscription days."""
+    data = await request.json()
+    if data.get("admin_pin") != "969696":
+        raise HTTPException(status_code=403, detail="Admin PIN required")
+    from app.services.redemption_limit_service import _cumulative_cap
+    now = datetime.now(timezone.utc)
+    rows, over = [], 0
+    async for u in db.users.find({"redemption_limit_start_date": {"$exists": True}}, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "redemption_limit_start_date": 1}):
+        start = datetime.fromisoformat(u["redemption_limit_start_date"].replace("Z", "+00:00"))
+        old_cap = _cumulative_cap(min(365, max(0, (now - start).days) + 1))
+        snap = await get_status(db, u["uid"])
+        if snap["cumulative_cap"] < old_cap:
+            if snap["used_prc"] > snap["cumulative_cap"]:
+                over += 1
+            rows.append({"uid": u["uid"], "name": u.get("name"), "mobile": u.get("mobile"),
+                         "old_cap_prc": old_cap, "new_cap_prc": snap["cumulative_cap"],
+                         "used_prc": snap["used_prc"], "available_prc": snap["available_prc"],
+                         "subscription_active": snap["subscription_active"]})
+    rows.sort(key=lambda r: r["old_cap_prc"] - r["new_cap_prc"], reverse=True)
+    return {"affected_users": len(rows), "used_more_than_new_cap": over, "users": rows[:500]}
+
+
 @router.post("/admin/redemption-limit/reset-all-anchors")
 async def admin_reset_all_anchors(request: Request):
     """One-time migration (Sep 16 2026) — reset every user's redemption-

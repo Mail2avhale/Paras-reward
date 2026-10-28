@@ -3489,3 +3489,9 @@ Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
 - **Dashboard endpoint**: returns status + structure_toward_next + direct_leader_counts + multiplier_ladder.
 - **UI (Playwright, District Leader test)**: `community-leader-card` visible with all 7 key data-testids present; role="District Community Leader", multiplier="1.25×", effective="1.250%" (base 1.00% × 1.25). Level Progression tiles all show base + boosted %.
 - **Admin flow untouched**: existing `POST /api/admin/partners/assign` continues to work; no new approval endpoints introduced per user request.
+
+## Oct 2026 — Redeem Limit grows only on active-subscription days
+- `app/services/redemption_limit_service.get_status` now computes day_number from merged paid-subscription periods (vip_payments approved, subscription_payments paid/active, subscriptions active, current user expiry) since cycle start. Inactive days pause growth; renew resumes. Never-subscribed users = 0.
+- Stateless recompute auto-corrects past over-growth (users with used > new cap see 0 available).
+- Snapshot adds `subscription_active`, `is_paused`, `ever_subscribed`; UI shows "Paused" banner.
+- New admin read-only `POST /api/admin/redemption-limit/recalc-report` (admin token + admin_pin 969696) lists affected users.

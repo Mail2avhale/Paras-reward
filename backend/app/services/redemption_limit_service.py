@@ -1,5 +1,5 @@
 """
-Redemption Daily Limit Service (Sep 1 2026)
+Redemption Daily Limit Service (Sep 1 2026; Oct 2026: grows only on active-subscription days)
 ────────────────────────────────────────────────────────────────────────
 Adds a cumulative PRC "redemption ceiling" that grows daily using
 the formula:
@@ -91,23 +91,87 @@ async def _resolve_start_date(user: dict) -> Tuple[str, bool]:
     return DEFAULT_EXISTING_USER_START, True
 
 
+PAID_PLANS = {"elite", "startup", "growth", "vip", "pro"}
+
+
+def _parse(ts) -> Optional[datetime]:
+    if not ts:
+        return None
+    if isinstance(ts, datetime):
+        dt = ts
+    else:
+        try:
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except Exception:
+            return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _is_active_now(user: dict, now: datetime) -> bool:
+    plan = (user.get("subscription_plan") or "").lower()
+    if plan not in PAID_PLANS and user.get("membership_type") != "vip":
+        return False
+    exp = _parse(user.get("subscription_expiry"))
+    return bool(exp and exp > now)
+
+
+async def _active_intervals(db, user: dict, now: datetime) -> list:
+    """Merged [(start, end)] periods when the user held a paid subscription."""
+    uid = user["uid"]
+    raw = []
+    async for d in db.vip_payments.find({"user_id": uid, "status": "approved"},
+                                        {"_id": 0, "approved_at": 1, "new_expiry": 1}):
+        raw.append((_parse(d.get("approved_at")), _parse(d.get("new_expiry"))))
+    async for d in db.subscription_payments.find(
+            {"user_id": uid, "status": {"$in": ["paid", "active"]}},
+            {"_id": 0, "subscription_start": 1, "activated_at": 1, "created_at": 1,
+             "subscription_expiry": 1, "scheduled_end": 1}):
+        raw.append((_parse(d.get("subscription_start") or d.get("activated_at") or d.get("created_at")),
+                    _parse(d.get("subscription_expiry") or d.get("scheduled_end"))))
+    async for d in db.subscriptions.find({"user_id": uid, "status": "active"},
+                                         {"_id": 0, "start_date": 1, "end_date": 1, "expiry": 1}):
+        raw.append((_parse(d.get("start_date")), _parse(d.get("end_date") or d.get("expiry"))))
+    if _is_active_now(user, now):
+        exp = _parse(user.get("subscription_expiry"))
+        st = _parse(user.get("subscription_start") or user.get("subscription_start_date")
+                    or user.get("subscription_activated_at")) or (exp - timedelta(days=30))
+        raw.append((st, exp))
+
+    spans = sorted((s, min(e, now)) for s, e in raw if s and e and min(e, now) > s)
+    merged = []
+    for s, e in spans:
+        if merged and s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+        else:
+            merged.append((s, e))
+    return merged
+
+
+def _active_seconds(intervals: list, since: datetime) -> float:
+    return sum((e - max(s, since)).total_seconds() for s, e in intervals if e > since)
+
+
+def _cycle_rollover_point(intervals: list, since: datetime) -> Optional[datetime]:
+    """Moment when CYCLE_LENGTH_DAYS of active time completes after `since`."""
+    left = CYCLE_LENGTH_DAYS * 86400.0
+    for s, e in intervals:
+        if e <= since:
+            continue
+        seg = (e - max(s, since)).total_seconds()
+        if seg >= left:
+            return max(s, since) + timedelta(seconds=left)
+        left -= seg
+    return None
+
+
 async def get_status(db, user_id: str) -> dict:
     """Full redemption-limit snapshot for a user.
 
-    Fields:
-      day_number         current day in the cycle (1..365)
-      daily_increment    PRC unlocked TODAY (day_number × 10)
-      cumulative_cap     total PRC unlocked so far this cycle
-      used_prc           PRC already deducted this cycle
-      available_prc      cumulative_cap − used_prc, clamped to ≥ 0
-      cycle_start_iso    when the current cycle began
-      cycle_end_iso      when this cycle rolls over (day 366 = new day 1)
-      days_remaining     days left before auto-reset
-      inr_available      available_prc / prc_rate (₹)
+    The limit grows ONLY on days the user holds an active paid subscription:
+    day_number = active subscription days since cycle start (paused while inactive).
     """
     user = await db.users.find_one({"uid": user_id})
     if not user:
-        # Return an empty snapshot — callers can decide whether to block
         return {
             "user_id": user_id,
             "day_number": 0, "daily_increment": 0,
@@ -115,26 +179,28 @@ async def get_status(db, user_id: str) -> dict:
             "cycle_start_iso": None, "cycle_end_iso": None,
             "days_remaining": 0, "inr_available": 0.0,
             "prc_rate": PRC_TO_INR_RATE,
+            "subscription_active": False, "is_paused": True, "ever_subscribed": False,
         }
 
     start_iso, is_new = await _resolve_start_date(user)
     now = datetime.now(timezone.utc)
-    day = _days_since(start_iso, now)
+    intervals = await _active_intervals(db, user, now)
+    used = float(user.get("redemption_limit_used_prc") or 0.0)
 
-    # Auto-reset when cycle expires (Q3)
-    if day > CYCLE_LENGTH_DAYS:
-        start_iso = now.isoformat()
-        day = 1
-        is_new = True
+    start_dt = _parse(start_iso) or now
+    rolled = False
+    while True:
+        point = _cycle_rollover_point(intervals, start_dt)
+        if not point or point > now:
+            break
+        start_dt, rolled = point, True
+    if rolled:
+        start_iso, used, is_new = start_dt.isoformat(), 0.0, False
         await db.users.update_one(
             {"uid": user_id},
-            {"$set": {
-                "redemption_limit_start_date": start_iso,
-                "redemption_limit_used_prc": 0.0,
-            }},
+            {"$set": {"redemption_limit_start_date": start_iso, "redemption_limit_used_prc": 0.0}},
         )
 
-    # Lazy anchor persist so subsequent calls skip the fallback branch
     if is_new:
         await db.users.update_one(
             {"uid": user_id, "redemption_limit_start_date": {"$exists": False}},
@@ -144,17 +210,12 @@ async def get_status(db, user_id: str) -> dict:
             }},
         )
 
-    used = float(user.get("redemption_limit_used_prc") or 0.0)
+    secs = _active_seconds(intervals, start_dt)
+    day = min(CYCLE_LENGTH_DAYS, int(secs // 86400) + 1) if secs > 0 else 0
+    active_now = _is_active_now(user, now)
     cap = _cumulative_cap(day)
     available = max(0.0, cap - used)
-
-    try:
-        start_dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
-        if start_dt.tzinfo is None:
-            start_dt = start_dt.replace(tzinfo=timezone.utc)
-        cycle_end_dt = start_dt + timedelta(days=CYCLE_LENGTH_DAYS)
-    except Exception:
-        cycle_end_dt = now + timedelta(days=CYCLE_LENGTH_DAYS)
+    days_remaining = max(0, CYCLE_LENGTH_DAYS - day)
 
     return {
         "user_id": user_id,
@@ -164,10 +225,13 @@ async def get_status(db, user_id: str) -> dict:
         "used_prc": round(used, 2),
         "available_prc": round(available, 2),
         "cycle_start_iso": start_iso,
-        "cycle_end_iso": cycle_end_dt.isoformat(),
-        "days_remaining": max(0, CYCLE_LENGTH_DAYS - day),
+        "cycle_end_iso": (now + timedelta(days=days_remaining)).isoformat() if active_now else None,
+        "days_remaining": days_remaining,
         "inr_available": round(available / PRC_TO_INR_RATE, 2),
         "prc_rate": PRC_TO_INR_RATE,
+        "subscription_active": active_now,
+        "is_paused": not active_now,
+        "ever_subscribed": bool(intervals),
     }
 
 

@@ -76,6 +76,14 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
         One shared limit for Recharge, Bill Payments &amp; Redeem to Bank
       </p>
 
+      {data.is_paused && (
+        <div data-testid="progressive-limit-paused" className="mb-3 rounded-xl px-3 py-2 text-[11px] font-semibold leading-snug" style={{ background: 'rgba(245, 196, 81, 0.12)', color: 'var(--pr-gold)', border: '1px solid rgba(245, 196, 81, 0.4)' }}>
+          {data.ever_subscribed
+            ? 'Limit paused — renew your subscription to resume daily growth.'
+            : 'Activate a subscription to start growing your Redeem Limit.'}
+        </div>
+      )}
+
       <div className="mb-4">
         <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--pr-surface-2)' }}>
           <div
@@ -86,7 +94,7 @@ const ProgressiveRedeemLimit = ({ userId, onLimitCheck }) => {
         </div>
         <div className="flex justify-between mt-1 text-[10px] font-medium" style={{ color: 'var(--paras-text-mute)' }}>
           <span>0 PRC</span>
-          <span>Cycle resets in {daysRemaining} day{daysRemaining === 1 ? '' : 's'}</span>
+          <span data-testid="progressive-cycle-info">{data.is_paused ? `Day ${data.day_number} of 365 · Paused` : `Cycle resets in ${daysRemaining} active day${daysRemaining === 1 ? '' : 's'}`}</span>
         </div>
       </div>
 
