@@ -38,7 +38,11 @@ async def admin_recalc_report(request: Request):
     from app.services.redemption_limit_service import _cumulative_cap
     now = datetime.now(timezone.utc)
     rows, over = [], 0
-    async for u in db.users.find({"redemption_limit_start_date": {"$exists": True}}, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "redemption_limit_start_date": 1}):
+    skip, limit = int(data.get("skip", 0)), min(int(data.get("limit", 300)), 1000)
+    q = {"redemption_limit_start_date": {"$exists": True}}
+    total = await db.users.count_documents(q)
+    cursor = db.users.find(q, {"_id": 0, "uid": 1, "name": 1, "mobile": 1, "redemption_limit_start_date": 1}).sort("uid", 1).skip(skip).limit(limit)
+    async for u in cursor:
         start = datetime.fromisoformat(u["redemption_limit_start_date"].replace("Z", "+00:00"))
         old_cap = _cumulative_cap(min(365, max(0, (now - start).days) + 1))
         snap = await get_status(db, u["uid"])
@@ -50,7 +54,9 @@ async def admin_recalc_report(request: Request):
                          "used_prc": snap["used_prc"], "available_prc": snap["available_prc"],
                          "subscription_active": snap["subscription_active"]})
     rows.sort(key=lambda r: r["old_cap_prc"] - r["new_cap_prc"], reverse=True)
-    return {"affected_users": len(rows), "used_more_than_new_cap": over, "users": rows[:500]}
+    nxt = skip + limit
+    return {"total_users": total, "scanned_from": skip, "next_skip": nxt if nxt < total else None,
+            "affected_users": len(rows), "used_more_than_new_cap": over, "users": rows}
 
 
 @router.post("/admin/redemption-limit/reset-all-anchors")

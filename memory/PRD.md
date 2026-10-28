@@ -3494,4 +3494,4 @@ Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
 - `app/services/redemption_limit_service.get_status` now computes day_number from merged paid-subscription periods (vip_payments approved, subscription_payments paid/active, subscriptions active, current user expiry) since cycle start. Inactive days pause growth; renew resumes. Never-subscribed users = 0.
 - Stateless recompute auto-corrects past over-growth (users with used > new cap see 0 available).
 - Snapshot adds `subscription_active`, `is_paused`, `ever_subscribed`; UI shows "Paused" banner.
-- New admin read-only `POST /api/admin/redemption-limit/recalc-report` (admin token + admin_pin 969696) lists affected users.
+- New admin read-only `POST /api/admin/redemption-limit/recalc-report` (admin token + admin_pin 969696) lists affected users (paginated: `skip`, `limit`≤1000, returns `next_skip`; prod has ~4k users, full scan timed out 504).
