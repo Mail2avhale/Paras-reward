@@ -103,6 +103,14 @@ def classify(doc, ev):
     return "missing", d
 
 
+def refund_state(doc, ev):
+    """classify() for admin display; Eko refund-pending rows are not refundable from here."""
+    cat, amt = classify(doc, ev)
+    if cat == "missing" and doc.get("status") in REFUND_PENDING_STATUSES:
+        return "eko_refund_pending", amt
+    return cat, amt
+
+
 async def refund_request(db, coll, doc, amount, reason, source, debit_count=0):
     """Idempotent PRC refund with ledger entry. Returns {"ok", "status", ...}."""
     from app.services.wallet_service_v2 import WalletServiceV2
@@ -205,7 +213,10 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
                 {"status": {"$in": FAILED_STATUSES + ["refunded"]}, "prc_refunded": True})
             summary["refund_pending"] += await db[coll].count_documents({"status": {"$in": REFUND_PENDING_STATUSES}})
             if check_stuck and coll != "bill_payment_requests":
-                async for d in db[coll].find({"status": {"$in": STUCK_STATUSES}, "created_at": {"$lt": stuck_cut}},
+                stuck_q = {"status": {"$in": STUCK_STATUSES},
+                           "$or": [{"created_at": {"$lt": stuck_cut}},
+                                   {"created_at": {"$lt": datetime.fromisoformat(stuck_cut)}}]}
+                async for d in db[coll].find(stuck_q,
                                              {"_id": 0}).sort("created_at", 1).limit(max(0, stuck_limit - stuck_done)):
                     stuck_done += 1
                     summary["stuck_checked"] += 1
@@ -224,6 +235,13 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
                     await runs.update_one({"_id": run_id}, {"$set": {"summary": summary, "updated_at": _now()}})
             if batch:
                 await _process_batch(db, run_id, coll, batch, apply, auto, summary)
+        claim_cut = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+        async for ev in db.refund_events.find({"status": "claimed", "ts": {"$lt": claim_cut}}):
+            summary["review"] += 1
+            await db.refund_audit_items.insert_one({
+                "run_id": run_id, "collection": ev.get("collection"), "request_id": ev.get("request_id"),
+                "user_id": ev.get("user_id"), "category": "review", "prc_amount": ev.get("amount"),
+                "note": "Refund was claimed but the wallet credit was not confirmed"})
         await runs.update_one({"_id": run_id}, {"$set": {"status": "done", "summary": summary, "finished_at": _now()}})
     except Exception as e:
         logging.exception("[REFUND-AUDIT] run failed")
@@ -279,13 +297,23 @@ async def _process_batch(db, run_id, coll, docs, apply, auto, summary):
 
 async def start_run(db, apply, auto, triggered_by):
     run_id = f"RFA-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
-    running = await db.refund_audit_runs.find_one({"status": "running"}, {"_id": 1, "started_at": 1})
-    if running:
-        started = datetime.fromisoformat(running["started_at"])
-        if datetime.now(timezone.utc) - started < timedelta(hours=2):
-            return None
-        await db.refund_audit_runs.update_one({"_id": running["_id"]}, {"$set": {"status": "abandoned"}})
+    stale = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    try:
+        lock = await db.refund_audit_lock.find_one_and_update(
+            {"_id": "run", "$or": [{"run_id": None}, {"started_at": {"$lt": stale}}]},
+            {"$set": {"run_id": run_id, "started_at": _now()}}, upsert=True)
+    except DuplicateKeyError:
+        return None
+    if lock and lock.get("run_id"):
+        await db.refund_audit_runs.update_one({"_id": lock["run_id"], "status": "running"}, {"$set": {"status": "abandoned"}})
     await db.refund_audit_runs.insert_one({"_id": run_id, "status": "running", "apply": apply, "auto": auto,
                                            "triggered_by": triggered_by, "started_at": _now()})
-    asyncio.create_task(run_audit(db, run_id, apply=apply, auto=auto))
+    asyncio.create_task(_run_and_unlock(db, run_id, apply, auto))
     return run_id
+
+
+async def _run_and_unlock(db, run_id, apply, auto):
+    try:
+        await run_audit(db, run_id, apply=apply, auto=auto)
+    finally:
+        await db.refund_audit_lock.update_one({"_id": "run", "run_id": run_id}, {"$set": {"run_id": None}})

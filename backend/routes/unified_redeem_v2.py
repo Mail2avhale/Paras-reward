@@ -2401,7 +2401,7 @@ async def get_bbps_requests(
             seen_ids.add(rid)
         unique.append(r)
 
-    unique.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    unique.sort(key=lambda x: (x.get("created_at").isoformat() if isinstance(x.get("created_at"), datetime) else str(x.get("created_at") or "")), reverse=True)
 
     # Apply pagination
     skip = (page - 1) * limit
@@ -2424,14 +2424,14 @@ async def get_bbps_requests(
         except Exception as e:
             logging.warning(f"[BBPS list] batch user enrichment failed: {e}")
 
-    from app.services.prc_refund_audit import _evidence, classify, FAILED_STATUSES, REFUND_PENDING_STATUSES
+    from app.services.prc_refund_audit import _evidence, refund_state, FAILED_STATUSES, REFUND_PENDING_STATUSES
     _fail_like = set(FAILED_STATUSES + REFUND_PENDING_STATUSES + ["refunded"])
     _ev = await _evidence(db, [r["request_id"] for r in page_results if r.get("request_id") and r.get("status") in _fail_like])
     requests = []
     for req in page_results:
         req["source_collection"] = req.pop("_source", None)
         if req.get("request_id") in _ev:
-            req["refund_state"], req["refund_state_prc"] = classify(req, _ev[req["request_id"]])
+            req["refund_state"], req["refund_state_prc"] = refund_state(req, _ev[req["request_id"]])
         uid = req.get("user_id")
         if uid and not req.get("user_name"):
             user = users_by_uid.get(uid)
@@ -2585,12 +2585,12 @@ async def get_bbps_request_details(request_id: str):
     
     if not request_doc:
         raise HTTPException(status_code=404, detail="Request not found")
-    from app.services.prc_refund_audit import _evidence, classify, FAILED_STATUSES, REFUND_PENDING_STATUSES
+    from app.services.prc_refund_audit import _evidence, refund_state, FAILED_STATUSES, REFUND_PENDING_STATUSES
     _ev = (await _evidence(db, [request_id]))[request_id]
     if request_doc.get("status") in set(FAILED_STATUSES + REFUND_PENDING_STATUSES + ["refunded"]):
-        refund_state, refund_state_prc = classify(request_doc, _ev)
+        refund_state_v, refund_state_prc = refund_state(request_doc, _ev)
     else:
-        refund_state, refund_state_prc = "not_applicable", 0
+        refund_state_v, refund_state_prc = "not_applicable", 0
     
     # Get user info
     user = await db.users.find_one(
@@ -2611,8 +2611,8 @@ async def get_bbps_request_details(request_id: str):
             "response": request_doc.get("eko_response")
         },
         "refund_info": {
-            "refunded": refund_state == "refunded",
-            "state": refund_state,
+            "refunded": refund_state_v == "refunded",
+            "state": refund_state_v,
             "amount": refund_state_prc or request_doc.get("prc_refund_amount") or request_doc.get("refund_amount") or request_doc.get("total_prc_deducted") or 0,
             "refunded_at": request_doc.get("refund_at") or request_doc.get("refunded_at"),
             "ledger_debits": _ev["debits"],

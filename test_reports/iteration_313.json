@@ -1,0 +1,46 @@
+{
+  "summary": "Tested the PRC Refund Audit feature end to end (backend + admin UI + user UI). 11 of 12 backend pytest cases pass. Classification is correct for all 7 seeded cases: missing; retry_failed missing 500; recharge missing; flagged not listed; not_deducted; bill_payment mirror skipped; ledger-equal counted as refunded. Report-only scan does not change balances. Apply refunds each item exactly once, and re-running apply changes nothing. Ledger and prc_ledger credit rows are written with txn_type refund. 5 concurrent refund-one calls give one 200 and four 400. manual-refund and recharge admin refund both refuse a second refund. Cron: 401 without auth or with a wrong token, 200 accepted with the secret, duplicate:true on the same X-Webhook-Id. List refund_state/source_collection, detail refund_info (recharge_transactions is used, completed shows not_applicable) and receipt prc_refund_amount/refund_at all work. Admin UI works: panel stats, Scan, row Refund, Refund All with confirm, all-clear text, list badges and Refund buttons, refund-status-box, and the modal Refund button only shows for the missing state. User UI works: 'PRC Refunded · 250' and 'Refund in progress' badges, and receipt-refund-amount. I found and fixed a critical 500 on the unfiltered admin BBPS list. I also found a security gap: refund and list endpoints under /api/redeem/admin and /api/recharge/admin need no auth.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/redeem/admin/bbps-requests (no filters)", "issue": "FIXED by testing agent. Returned 500 (TypeError: '<' not supported between datetime and str) because unique.sort(key=created_at) mixed datetime-typed created_at (11 redeem_requests docs in preview) with ISO strings. The admin BBPS dashboard list failed on its default load. The sort key now normalizes datetime to isoformat.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/recharge/admin/refund/{id}, POST /api/redeem/admin/manual-refund/{id}, GET /api/redeem/admin/bbps-requests, GET /api/redeem/admin/bbps-request/{id}", "issue": "No authentication. The admin middleware in server.py only guards paths starting with /api/admin/. An anonymous curl refunded PRC (200 success) and read the full BBPS list including user PII. The idempotency guard limits the money risk, but these are admin-only actions. Likely pre-existing.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "_refund_recharge (eko_recharge.py)", "issue": "Sets total_prc_deducted=0 after a refund. The user receipt then shows 'PRC Deducted: -' next to 'PRC Refunded: 250', and the original deduction amount is lost from the doc."},
+      {"endpoint": "prc_refund_audit.start_run", "issue": "The 'already running' check uses find_one and then insert, which is not atomic. Two simultaneous run requests can start two runs. Refunds stay safe because of the refund_events guard, but the work runs twice. A unique partial index or findOneAndUpdate lock would fix it."},
+      {"endpoint": "prc_refund_audit.run_audit stuck query", "issue": "Uses created_at < ISO string. Docs with a datetime-typed created_at are never checked as stuck."},
+      {"endpoint": "classify()", "issue": "A doc with prc_refunded=True, no ledger debit, and a crash between the claim and the credit is classified as 'refunded' even though no credit was ever written. refund_events with status 'claimed' and never 'done' could be used to find these."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminBBPSDashboard list RefundStateBadge", "issue": "Rows with status refund_pending (27 in preview) show 'Not Refunded · X' and a red Refund button. Clicking it always fails with toast 'Only failed transactions can be refunded (status: refund_pending)', because refund-one only accepts FAILED_STATUSES and the audit counts these separately. Either hide the button and show an 'Eko refund pending' state for refund_pending, or allow refunds for that status.", "selector": "[data-testid='audit-refund-btn-<refund_pending id>']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Refund Audit panel", "issues": ["After 'Refund All', the 'Not refunded' stat still shows '1 · 400 PRC' (the count at scan time) next to the 'All failed transactions... are refunded' message, which is confusing. Show missing minus refunded_now, or rename the label to 'Found not refunded'.", "The service column shows raw values like 'mobile'; the list uses friendlier labels.", "The all-clear message shows even when Needs review > 0."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_prc_refund_audit.py", "/app/backend/tests/seed_refund_audit_ui.py", "/app/test_reports/pytest/pytest_refund_audit.xml"],
+  "action_items": [
+    "Add admin auth (Bearer admin token) to /api/redeem/admin/* and /api/recharge/admin/* refund and list endpoints, or extend the middleware prefix check.",
+    "Handle refund_pending rows in the BBPS list: no 'Not Refunded' badge or Refund button that always fails, or make refund-one accept refund_pending.",
+    "Keep the original total_prc_deducted after a recharge refund so the receipt still shows the deducted amount.",
+    "Make start_run's single-run lock atomic.",
+    "Optional: clearer 'Not refunded' stat after an apply run."
+  ],
+  "critical_code_review_comments": [
+    "Fixed by me: the unified_redeem_v2.get_bbps_requests sort crashed on mixed datetime/str created_at.",
+    "Admin routes outside the /api/admin prefix are unauthenticated (security).",
+    "start_run race condition (find then insert).",
+    "The refund_events key includes debit_count, so a later retry debit allows a new refund. This is intended, but it relies on ledger debit_count being accurate; legacy docs without a ledger always use key :0.",
+    "The RefundAuditPanel load() errors are swallowed (catch(() => {})), so the panel shows nothing if the API fails. Consider an error state."
+  ],
+  "updated_files": ["/app/backend/routes/unified_redeem_v2.py (sort key fix)", "/app/backend/tests/test_prc_refund_audit.py", "/app/backend/tests/seed_refund_audit_ui.py"],
+  "success_rate": {"backend": "92% (11/12; the failing case is the unauthenticated admin-refund security probe)", "frontend": "95% (all requested testids and flows work; refund_pending list button is inconsistent)"},
+  "test_credentials": "Admin admin@test.com / 153759. Explorer user 9000006864 / 900006. API login works; PIN boxes in the UI are flaky with Playwright typing, so inject localStorage paras_user/token after POST /api/auth/login instead.",
+  "seed_data_creation": "The pytest fixture creates and cleans up TEST_RFAT_USER and TEST_RFAT-* docs. The UI seed script (seed|cleanup) creates TEST_RFAUI_USER, TEST_UI-*, and TEST_UIU-* on the explorer user; it was cleaned up and the explorer balance restored. The main agent's own RFA-* docs for TEST_RFA_USER are still in the DB and were not touched. Note: apply runs and cron refund every 'missing' doc in the preview DB.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_prc_refund_audit.py (takes about 15s). test_unauth_refund_endpoints_probe should pass once auth is added to the /api/recharge/admin refund route. The admin BBPS page is at /admin/bbps. The detail modal closes via data-testid=detail-modal-close-btn (Escape does not work). Eko is not configured, so stuck checks return unknown."
+}

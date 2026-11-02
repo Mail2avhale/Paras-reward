@@ -1225,7 +1225,7 @@ async def get_transaction_receipt(request_id: str, user_id: str = ""):
             "number": txn.get("number"),
             "operator_id": txn.get("operator_id"),
             "amount_inr": txn.get("amount_inr", 0),
-            "total_prc_deducted": txn.get("total_prc_deducted", 0),
+            "total_prc_deducted": txn.get("total_prc_deducted") or txn.get("prc_refund_amount") or 0,
             "prc_required": txn.get("prc_required", 0),
             "processing_fee_prc": txn.get("processing_fee_prc", 0),
             "admin_charge_prc": txn.get("admin_charge_prc", 0),

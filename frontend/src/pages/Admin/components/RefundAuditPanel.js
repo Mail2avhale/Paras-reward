@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { API } from '../../../lib/api';
 
 const fmt = (n) => Math.round(Number(n || 0)).toLocaleString('en-IN');
+const SERVICE_LABEL = { mobile: 'Mobile Recharge', dth: 'DTH Recharge', mobile_recharge: 'Mobile Recharge', dish_recharge: 'DTH Recharge' };
 
 const Stat = ({ label, value, tone, testId }) => (
   <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -90,7 +91,7 @@ const RefundAuditPanel = () => {
 
       {run && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
-          <Stat label="Not refunded" value={`${s.missing || 0} · ${fmt(s.missing_prc)} PRC`} tone="text-red-600" testId="audit-missing" />
+          <Stat label="Found not refunded" value={`${s.missing || 0} · ${fmt(s.missing_prc)} PRC`} tone="text-red-600" testId="audit-missing" />
           <Stat label="Refunded this run" value={`${s.refunded_now || 0} · ${fmt(s.refunded_now_prc)} PRC`} tone="text-emerald-600" testId="audit-refunded-now" />
           <Stat label="Already refunded" value={s.already_refunded || 0} tone="text-slate-800" testId="audit-already" />
           <Stat label="Needs review" value={s.review || 0} tone="text-amber-600" testId="audit-review" />
@@ -109,7 +110,7 @@ const RefundAuditPanel = () => {
               {pendingItems.map((it) => (
                 <tr key={`${it.collection}-${it.request_id}`} className="border-t border-slate-100" data-testid={`audit-row-${it.request_id}`}>
                   <td className="p-2">{it.user_name || it.user_id}<div className="text-slate-400">{it.user_mobile}</div></td>
-                  <td className="p-2">{it.service || '-'}<div className="text-slate-400">{it.status} · ₹{it.amount_inr || '-'}</div></td>
+                  <td className="p-2">{SERVICE_LABEL[it.service] || String(it.service || '-').replace(/_/g, ' ')}<div className="text-slate-400">{it.status} · ₹{it.amount_inr || '-'}</div></td>
                   <td className="p-2">{it.created_at ? new Date(it.created_at).toLocaleDateString('en-IN') : '-'}</td>
                   <td className="p-2 text-right font-bold text-red-600">{fmt(it.prc_amount)}</td>
                   <td className="p-2 text-right">
@@ -124,7 +125,9 @@ const RefundAuditPanel = () => {
         </div>
       )}
       {!running && run && pendingItems.length === 0 && (
-        <p data-testid="audit-all-clear" className="text-sm text-emerald-700 font-semibold">All failed transactions in the last scan are refunded.</p>
+        <p data-testid="audit-all-clear" className="text-sm text-emerald-700 font-semibold">
+          All failed transactions in the last scan are refunded.{s.review ? ` ${s.review} need manual review.` : ''}
+        </p>
       )}
     </div>
   );

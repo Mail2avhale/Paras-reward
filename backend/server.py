@@ -1348,8 +1348,8 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         path = request.url.path
         
-        # Only check routes under /api/admin/
-        if not path.startswith("/api/admin/"):
+        # Only check routes under /api/admin/ (+ admin sub-routes of redeem/recharge/bbps)
+        if not path.startswith(("/api/admin/", "/api/redeem/admin/", "/api/recharge/admin/", "/api/bbps/admin/")):
             return await call_next(request)
         
         # Skip excluded routes
