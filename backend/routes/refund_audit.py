@@ -64,7 +64,7 @@ async def admin_refund_one(data: RefundOneRequest, request: Request):
     if doc.get("status") not in pra.FAILED_STATUSES:
         raise HTTPException(status_code=400, detail=f"Only failed transactions can be refunded (status: {doc.get('status')})")
     ev = (await pra._evidence(db, [data.request_id]))[data.request_id]
-    cat, amt = pra.classify(doc, ev)
+    cat, amt = pra.refund_state(doc, ev)
     if cat != "missing":
         raise HTTPException(status_code=400, detail=f"Not refundable: {cat.replace('_', ' ')}")
     res = await pra.refund_request(db, data.collection, doc, amt, "Admin refund audit",

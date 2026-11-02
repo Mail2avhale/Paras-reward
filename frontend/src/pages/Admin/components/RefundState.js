@@ -9,6 +9,7 @@ export const REFUND_STATE_UI = {
   review: { label: 'Needs Review', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertTriangle },
   not_deducted: { label: 'No PRC Deducted', cls: 'bg-slate-50 text-slate-600 border-slate-200', icon: MinusCircle },
   eko_refund_pending: { label: 'Eko Refund Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertTriangle },
+  legacy_copy: { label: 'Legacy Copy', cls: 'bg-slate-50 text-slate-500 border-slate-200', icon: MinusCircle },
 };
 
 export const RefundStateBadge = ({ req, onRefund, loading }) => {
@@ -47,6 +48,7 @@ export const RefundStatusBox = ({ info }) => {
         {info.state === 'review' && `Marked refunded but ledger does not match (${fmt(info.amount)} PRC). Check manually.`}
         {info.state === 'not_deducted' && 'No PRC was deducted for this request, nothing to refund.'}
         {info.state === 'eko_refund_pending' && `${fmt(info.amount)} PRC is held until the Eko refund (customer OTP) completes.`}
+        {info.state === 'legacy_copy' && 'Archived copy of another record. Check the original transaction for refund status.'}
       </p>
       {(info.ledger_debits > 0 || info.ledger_credits > 0) && (
         <p className="text-[11px] mt-1 opacity-80">Ledger: debited {fmt(info.ledger_debits)} · credited {fmt(info.ledger_credits)}</p>

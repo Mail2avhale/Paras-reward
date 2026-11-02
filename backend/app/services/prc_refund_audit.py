@@ -16,7 +16,8 @@ FAILED_STATUSES = ["failed", "FAILED", "Failed", "retry_failed", "RETRY_FAILED",
                    "rejected", "REJECTED", "cancelled"]
 STUCK_STATUSES = ["pending", "PENDING", "processing", "PROCESSING", "retrying"]
 REFUND_PENDING_STATUSES = ["refund_pending", "REFUND_PENDING"]
-AUTO_MAX_PRC = 50000.0
+AUTO_MAX_PRC = 10000.0
+BANK_HINTS = ("bank", "dmt", "withdraw", "emi", "settlement")
 STUCK_AFTER_HOURS = 24
 BATCH = 500
 
@@ -32,7 +33,7 @@ async def ensure_indexes(db):
     if _indexes_ready:
         return
     for coll, field in (("ledger", "reference"), ("transactions", "reference"),
-                        ("transactions", "metadata.request_id")):
+                        ("transactions", "metadata.request_id"), ("prc_ledger", "metadata.request_id")):
         try:
             await db[coll].create_index(field, background=True)
         except Exception as e:
@@ -82,6 +83,15 @@ async def _evidence(db, rids):
         rid = e.get("reference") if e.get("reference") in ev else (e.get("metadata") or {}).get("request_id")
         if rid in ev:
             ev[rid]["other_credit"] += abs(float(e.get("amount") or 0))
+    # Legacy direct refunds (e.g. benefit-cap cleanup) stored only in prc_ledger.metadata.request_id
+    async for e in db.prc_ledger.find({"metadata.request_id": {"$in": rids}},
+                                      {"_id": 0, "metadata.request_id": 1, "type": 1, "entry_type": 1, "amount": 1}):
+        t = str(e.get("type") or "").lower()
+        if e.get("entry_type") == "debit" or not ("refund" in t or e.get("entry_type") == "credit"):
+            continue
+        rid = (e.get("metadata") or {}).get("request_id")
+        if rid in ev:
+            ev[rid]["other_credit"] += abs(float(e.get("amount") or 0))
     return ev
 
 
@@ -104,10 +114,16 @@ def classify(doc, ev):
 
 
 def refund_state(doc, ev):
-    """classify() for admin display; Eko refund-pending rows are not refundable from here."""
+    """classify() for admin display/manual refund; bank and legacy-copy rows are never refundable here."""
+    if doc.get("_migrated_from") or doc.get("_legacy_minimal"):
+        return "legacy_copy", 0.0
     cat, amt = classify(doc, ev)
     if cat == "missing" and doc.get("status") in REFUND_PENDING_STATUSES:
         return "eko_refund_pending", amt
+    svc = " ".join(str(doc.get(k) or "") for k in ("service_type", "service_name", "request_type")).lower()
+    if cat == "missing" and (any(h in svc for h in BANK_HINTS)
+                             or str(doc.get("request_id", "")).startswith(("BTR", "BT-", "BW-", "CW-"))):
+        return "review", amt
     return cat, amt
 
 
@@ -208,6 +224,7 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
     try:
         stuck_cut = (datetime.now(timezone.utc) - timedelta(hours=STUCK_AFTER_HOURS)).isoformat()
         stuck_done = 0
+        seen = set()
         for coll in COLLS:
             summary["already_refunded"] += await db[coll].count_documents(
                 {"status": {"$in": FAILED_STATUSES + ["refunded"]}, "prc_refunded": True})
@@ -224,17 +241,18 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
                     summary[{"eko_failed": "stuck_failed", "eko_success": "stuck_success"}.get(r, "stuck_unknown")] += 1
                     await asyncio.sleep(0.3)
             q = {"status": {"$in": FAILED_STATUSES}, "prc_refunded": {"$ne": True}}
-            cursor = db[coll].find(q, {"_id": 0, "eko_response": 0, "status_history": 0}).sort("created_at", -1)
+            cursor = db[coll].find(q, {"_id": 0, "eko_response": 0, "status_history": 0, "raw_response": 0}).batch_size(BATCH)
             batch = []
             async for d in cursor:
                 if d.get("request_id"):
                     batch.append(d)
                 if len(batch) >= BATCH:
-                    await _process_batch(db, run_id, coll, batch, apply, auto, summary)
+                    await _process_batch(db, run_id, coll, batch, apply, auto, summary, seen)
                     batch = []
                     await runs.update_one({"_id": run_id}, {"$set": {"summary": summary, "updated_at": _now()}})
+                    await asyncio.sleep(0.2)
             if batch:
-                await _process_batch(db, run_id, coll, batch, apply, auto, summary)
+                await _process_batch(db, run_id, coll, batch, apply, auto, summary, seen)
         claim_cut = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
         async for ev in db.refund_events.find({"status": "claimed", "ts": {"$lt": claim_cut}}):
             summary["review"] += 1
@@ -249,7 +267,7 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
     return summary
 
 
-async def _process_batch(db, run_id, coll, docs, apply, auto, summary):
+async def _process_batch(db, run_id, coll, docs, apply, auto, summary, seen):
     rids = [d["request_id"] for d in docs]
     mirror = set()
     if coll == "bill_payment_requests":
@@ -259,9 +277,13 @@ async def _process_batch(db, run_id, coll, docs, apply, auto, summary):
     items = []
     for d in docs:
         rid = d["request_id"]
-        if rid in mirror:
+        if rid in mirror or (coll, rid) in seen:
             continue
-        cat, amt = classify(d, ev[rid])
+        seen.add((coll, rid))
+        if d.get("_migrated_from") or d.get("_legacy_minimal"):
+            summary["legacy_copies"] = summary.get("legacy_copies", 0) + 1
+            continue
+        cat, amt = refund_state(d, ev[rid])
         if cat == "not_deducted":
             summary["not_deducted"] += 1
             continue

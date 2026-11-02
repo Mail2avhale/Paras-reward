@@ -28,6 +28,12 @@ def seed():
     db.recharge_transactions.insert_one({"request_id": "RFA-5", "user_id": U, "status": "failed", "total_prc_deducted": 0, "created_at": TS})
     db.redeem_requests.insert_one({"request_id": "RFA-6", "user_id": U, "status": "failed", "total_prc_deducted": 700, "created_at": TS})
     L("RFA-6", "redeem", "debit", 700); L("RFA-6", "refund", "credit", 700)
+    db.redeem_requests.insert_one({"request_id": "BTR-RFA-7", "user_id": U, "status": "cancelled", "service_type": "bank_transfer", "total_prc_deducted": 900, "created_at": TS})
+    L("BTR-RFA-7", "bank_transfer", "debit", 900)
+    db.prc_ledger.insert_one({"uid": U, "user_id": U, "type": "bank_redeem_refund_cleanup", "amount": 900, "metadata": {"request_id": "BTR-RFA-7"}, "created_at": TS})
+    db.redeem_requests.insert_one({"request_id": "BTR-RFA-8", "user_id": U, "status": "failed", "service_type": "bank_transfer", "total_prc_deducted": 800, "created_at": TS})
+    L("BTR-RFA-8", "bank_transfer", "debit", 800)
+    db.redeem_requests.insert_one({"request_id": "RFA-9", "user_id": U, "status": "failed", "total_prc_deducted": 600, "_migrated_from": "recharge_transactions", "_legacy_minimal": True, "created_at": TS})
 
 tok = requests.post(f"{API}/api/auth/login", json={"identifier": "admin@test.com", "password": "153759"}).json()
 H = {"Authorization": f"Bearer {tok.get('token') or tok.get('access_token')}"}
@@ -49,6 +55,10 @@ items = requests.get(f"{API}/api/admin/refund-audit/items", params={"run_id": ri
 mine = sorted((i["request_id"], i["collection"], i["prc_amount"]) for i in items if i["user_id"] == U)
 print("MINE", mine)
 assert mine == [("RFA-1", "redeem_requests", 1000.0), ("RFA-2", "redeem_requests", 500.0), ("RFA-3", "recharge_transactions", 300.0)], mine
+rev = requests.get(f"{API}/api/admin/refund-audit/items", params={"run_id": rid, "category": "review"}, headers=H).json()["items"]
+rev_mine = sorted(i["request_id"] for i in rev if i["user_id"] == U)
+print("REVIEW", rev_mine)
+assert rev_mine == ["BTR-RFA-8"], rev_mine
 assert db.users.find_one({"uid": U})["prc_balance"] == 100.0
 
 # concurrent single refunds on RFA-1 → only one succeeds
