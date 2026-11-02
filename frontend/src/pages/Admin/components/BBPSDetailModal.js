@@ -2,6 +2,7 @@ import React from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../../components/ui/button';
 import { Loader2, Search, RefreshCw, Copy } from 'lucide-react';
+import { RefundStatusBox } from './RefundState';
 
 /**
  * Detail modal for a BBPS request — shows user info, Eko details,
@@ -133,14 +134,7 @@ const BBPSDetailModal = ({
             </div>
 
             {/* Refund Info */}
-            {selectedRequest.refund_info?.refunded && (
-              <div className="bg-orange-500/20 border border-orange-500/30 rounded-xl p-4">
-                <p className="text-xs text-orange-400 mb-2">Refund Info</p>
-                <p className="text-lg font-bold text-orange-400">
-                  {selectedRequest.refund_info.amount} PRC Refunded
-                </p>
-              </div>
-            )}
+            <RefundStatusBox info={selectedRequest.refund_info} />
 
             {/* Check EKO Wallet Refund Status */}
             {(selectedRequest.request?.status === 'failed' || selectedRequest.request?.status === 'FAILED' || selectedRequest.request?.status === 'refund_pending') && (
@@ -292,15 +286,15 @@ const BBPSDetailModal = ({
               </div>
             )}
 
-            {selectedRequest.request?.status !== 'completed' &&
-             selectedRequest.request?.status !== 'COMPLETED' &&
-             !selectedRequest.refund_info?.refunded &&
-             !selectedRequest.request?.prc_refunded && (
+            {(selectedRequest.refund_info?.state === 'missing' ||
+              (selectedRequest.refund_info?.state === 'not_applicable' &&
+               ['pending', 'PENDING', 'processing'].includes(selectedRequest.request?.status) &&
+               !selectedRequest.request?.prc_refunded)) && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <p className="text-xs text-red-600 mb-3 font-semibold">Admin Action: Refund PRC</p>
                 <p className="text-sm text-slate-600 mb-3">
                   This request is <strong>{selectedRequest.request?.status?.toUpperCase()}</strong> with no EKO transaction.
-                  PRC ({selectedRequest.request?.total_prc_deducted?.toLocaleString() || 'N/A'} PRC) was deducted but service was not delivered.
+                  PRC ({Number(selectedRequest.refund_info?.amount || selectedRequest.request?.total_prc_deducted || 0).toLocaleString('en-IN')} PRC) was deducted but service was not delivered.
                 </p>
                 <Button
                   onClick={() => handleRefund(
@@ -314,7 +308,7 @@ const BBPSDetailModal = ({
                   {refundLoading ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Processing Refund...</>
                   ) : (
-                    <><RefreshCw className="h-4 w-4 mr-2" /> Refund {selectedRequest.request?.total_prc_deducted?.toLocaleString() || ''} PRC</>
+                    <><RefreshCw className="h-4 w-4 mr-2" /> Refund {Number(selectedRequest.refund_info?.amount || selectedRequest.request?.total_prc_deducted || 0).toLocaleString('en-IN')} PRC</>
                   )}
                 </Button>
               </div>

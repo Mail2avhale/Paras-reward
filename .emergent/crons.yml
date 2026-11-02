@@ -1,0 +1,8 @@
+crons:
+  - name: prc-refund-audit
+    description: "Every 2 hours: refunds PRC for failed transactions that were never refunded"
+    cron: "0 */2 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/refund-audit"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true

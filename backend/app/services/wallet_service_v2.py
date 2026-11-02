@@ -124,9 +124,9 @@ class WalletServiceV2:
             # ATOMIC UPDATE with findOneAndUpdate
             # ============================================
             updated_user = db.users.find_one_and_update(
-                {"uid": user_id, "prc_balance": {"$gte": amount if check_balance else -float('inf')}},
+                {"uid": user_id, **({"prc_balance": {"$gte": amount}} if check_balance else {})},
                 {
-                    "$set": {"prc_balance": balance_after},
+                    "$inc": {"prc_balance": -amount},
                     # Layer 3 (Feb 24 2026) — bounded embed: keep only
                     # the last 20 items. Full history preserved in
                     # `db.ledger` + `db.prc_ledger` below.
@@ -154,9 +154,7 @@ class WalletServiceV2:
             
             # Verify balance was actually updated
             actual_balance = float(updated_user.get("prc_balance", 0))
-            if abs(actual_balance - balance_after) > 0.01:
-                logging.error(f"[WalletV2] CRITICAL: Balance mismatch! Expected {balance_after}, got {actual_balance}")
-                # Don't fail - log for investigation
+            balance_after, balance_before = actual_balance, actual_balance + amount
             
             # ============================================
             # CREATE LEDGER ENTRIES (both collections)
@@ -293,7 +291,7 @@ class WalletServiceV2:
             updated_user = db.users.find_one_and_update(
                 {"uid": user_id},
                 {
-                    "$set": {"prc_balance": balance_after},
+                    "$inc": {"prc_balance": amount},
                     # Layer 3 (Feb 24 2026) — bounded embed: keep only
                     # the last 20 items. Full history preserved in
                     # `db.ledger` + `db.prc_ledger` below.
@@ -320,6 +318,7 @@ class WalletServiceV2:
                 return {"success": False, "error": "Balance update failed"}
             
             actual_balance = float(updated_user.get("prc_balance", 0))
+            balance_after, balance_before = actual_balance, actual_balance - amount
             
             # ============================================
             # CREATE LEDGER ENTRIES

@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import BBPSDetailModal from './components/BBPSDetailModal';
 import BBPSReconcilePanel from './components/BBPSReconcilePanel';
+import RefundAuditPanel from './components/RefundAuditPanel';
+import { RefundStateBadge } from './components/RefundState';
 
 import { API } from "../../lib/api";
 
@@ -265,6 +267,20 @@ const AdminBBPSDashboard = () => {
     }
   };
 
+  const handleAuditRefund = async (req) => {
+    if (!window.confirm(`Refund ${Math.round(req.refund_state_prc || 0).toLocaleString('en-IN')} PRC to ${req.user_name || req.user_id}?`)) return;
+    setRefundLoading(true);
+    try {
+      const res = await axios.post(`${API}/admin/refund-audit/refund-one`, { collection: req.source_collection, request_id: req.request_id });
+      toast.success(`${Math.round(res.data.amount).toLocaleString('en-IN')} PRC refunded`);
+      fetchRequests();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Refund failed');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   // Admin: Fetch live transaction status from Eko
   const [enquiryLoading, setEnquiryLoading] = useState(null);
   const handleFetchStatus = async (requestId) => {
@@ -501,6 +517,8 @@ const AdminBBPSDashboard = () => {
         </Button>
       </div>
 
+
+      <RefundAuditPanel />
 
       {/* Eko Reconciliation Panel (extracted to BBPSReconcilePanel.js) */}
       <BBPSReconcilePanel
@@ -904,7 +922,9 @@ const AdminBBPSDashboard = () => {
                             </Button>
                           )}
                           {/* Refund PRC (for failed/pending/refund_pending where PRC not yet refunded) */}
-                          {(req.status === 'pending' || req.status === 'PENDING' || req.status === 'failed' || req.status === 'FAILED' || req.status === 'refund_pending') && !req.prc_refunded && (
+                          {req.refund_state ? (
+                            <RefundStateBadge req={req} onRefund={() => handleAuditRefund(req)} loading={refundLoading} />
+                          ) : (req.status === 'pending' || req.status === 'PENDING' || req.status === 'processing') && !req.prc_refunded && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -917,7 +937,7 @@ const AdminBBPSDashboard = () => {
                               Refund
                             </Button>
                           )}
-                          {req.prc_refunded && (
+                          {!req.refund_state && req.prc_refunded && (
                             <span className="text-[10px] text-green-500 font-semibold px-1">Refunded</span>
                           )}
                         </div>

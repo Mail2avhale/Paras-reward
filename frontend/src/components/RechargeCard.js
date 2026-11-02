@@ -611,7 +611,19 @@ const RechargeCard = ({ user, stats }) => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 text-[9px]">{formatDate(txn.created_at)}</span>
+                      <span className="text-gray-500 text-[9px] flex items-center gap-1.5">
+                        {formatDate(txn.created_at)}
+                        {['failed', 'refunded', 'refund_pending'].includes(txn.status) && (
+                          <span
+                            data-testid={`refund-badge-${txn.request_id}`}
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${txn.prc_refunded ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}
+                          >
+                            {txn.prc_refunded
+                              ? `PRC Refunded${txn.prc_refund_amount ? ` · ${Math.round(txn.prc_refund_amount).toLocaleString('en-IN')}` : ''}`
+                              : 'Refund in progress'}
+                          </span>
+                        )}
+                      </span>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleViewReceipt(txn.request_id)}
@@ -697,7 +709,10 @@ const RechargeCard = ({ user, stats }) => {
                   {receiptData.prc_refunded && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">PRC Refunded</span>
-                      <span className="text-orange-400 font-semibold">Yes</span>
+                      <span data-testid="receipt-refund-amount" className="text-emerald-400 font-semibold">
+                        {receiptData.prc_refund_amount ? `${Math.round(receiptData.prc_refund_amount).toLocaleString('en-IN')} PRC` : 'Yes'}
+                        {receiptData.refund_at ? ` · ${formatDate(receiptData.refund_at)}` : ''}
+                      </span>
                     </div>
                   )}
                 </div>

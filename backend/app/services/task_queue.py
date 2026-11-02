@@ -422,7 +422,8 @@ async def handle_retry_transfer(payload: Dict):
     total_prc = request_doc.get("total_prc_deducted", 0)
     
     # Check if user has been refunded - need to re-deduct PRC
-    if request_doc.get("prc_refunded"):
+    currently_refunded = bool(request_doc.get("prc_refunded"))
+    if currently_refunded:
         user = db.users.find_one({"uid": user_id}, {"prc_balance": 1})
         current_balance = user.get("prc_balance", 0) if user else 0
         
@@ -456,6 +457,7 @@ async def handle_retry_transfer(payload: Dict):
             {"request_id": request_id},
             {"$set": {"prc_refunded": False}}
         )
+        currently_refunded = False
     
     # Attempt the actual API call
     # Note: This is a placeholder - actual Eko API retry would go here
@@ -490,7 +492,10 @@ async def handle_retry_transfer(payload: Dict):
     )
     
     # If still failed and can retry, refund PRC
-    if not retry_result.get("success") and not request_doc.get("prc_refunded"):
+    claimed = (not retry_result.get("success") and not currently_refunded and db.redeem_requests.update_one(
+        {"request_id": request_id, "prc_refunded": {"$ne": True}}, {"$set": {"prc_refunded": True}}
+    ).modified_count == 1)
+    if claimed:
         WalletService.credit(
             user_id=user_id,
             amount=total_prc,

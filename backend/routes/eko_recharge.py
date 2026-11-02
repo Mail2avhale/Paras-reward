@@ -30,6 +30,7 @@ import hmac
 from datetime import datetime, timezone
 import httpx
 import asyncio
+from app.services.wallet_service_v2 import WalletServiceV2
 
 router = APIRouter(prefix="/recharge", tags=["Recharge"])
 
@@ -541,6 +542,16 @@ async def _raise_recharge_service_charge(txn: dict):
         logging.warning(f"[RECHARGE] service charge creation failed for {txn.get('request_id')}: {e}")
 
 
+async def _refund_recharge(txn, reason, source):
+    """Idempotent PRC refund with a visible ledger entry (Oct 2026)."""
+    from app.services.prc_refund_audit import refund_request
+    res = await refund_request(db, "recharge_transactions", txn, txn.get("total_prc_deducted") or 0, reason, source)
+    if res.get("ok"):
+        await _release_recharge_limit(txn["user_id"], txn["request_id"], txn.get("eko_tid"))
+        await db.recharge_transactions.update_one({"request_id": txn["request_id"]}, {"$set": {"total_prc_deducted": 0}})
+    return res
+
+
 async def _release_recharge_limit(user_id, request_id=None, tid=None):
     if request_id:
         # Refunded recharge — its cash service charge (if still unpaid) no longer applies
@@ -744,17 +755,20 @@ async def initiate_recharge(data: RechargeRequest):
         return {"success": False, "message": f"Insufficient PRC balance. Required: {total_prc:.0f} PRC", "error_ref": "R07"}
 
     # ===== Step 8: Atomic PRC deduction =====
-    deduct_result = await db.users.update_one(
-        {"uid": data.user_id, "prc_balance": {"$gte": total_prc}},
-        {"$inc": {"prc_balance": -total_prc}}
+    request_id = str(uuid.uuid4())
+    _rlabel = "Mobile Recharge" if data.recharge_type == "mobile" else "DTH Recharge"
+    deduct_result = await asyncio.to_thread(
+        WalletServiceV2.debit, data.user_id, total_prc, "recharge",
+        f"Redeem: {_rlabel} - ₹{int_amount}", request_id,
+        "mobile_recharge" if data.recharge_type == "mobile" else "dth_recharge",
+        {"skip_service_charge": True},
     )
-    if deduct_result.modified_count == 0:
-        logging.warning(f"[RECHARGE] Atomic PRC deduction failed for {data.user_id}")
+    if not deduct_result.get("success"):
+        logging.warning(f"[RECHARGE] Atomic PRC deduction failed for {data.user_id}: {deduct_result.get('error')}")
         return {"success": False, "message": GENERIC_ERROR}
 
     # ===== Step 8.5: Pre-insert "pending" record for concurrency guard =====
     # This ensures concurrent requests see the pending amount in daily/monthly limit checks
-    request_id = str(uuid.uuid4())
     client_ref_id = f"RCH{int(time.time() * 1000)}"
     pre_now = datetime.now(timezone.utc).isoformat()
     pending_txn = {
@@ -782,18 +796,18 @@ async def initiate_recharge(data: RechargeRequest):
     except Exception as e:
         logging.error(f"[RECHARGE] Step 8.5: Pending record insert failed: {e}")
         # Refund PRC and abort
-        await db.users.update_one({"uid": data.user_id}, {"$inc": {"prc_balance": total_prc}})
+        await asyncio.to_thread(WalletServiceV2.credit, data.user_id, total_prc, "refund",
+                                f"Refund: {_rlabel} failed - ₹{int_amount}", request_id)
         return {"success": False, "message": GENERIC_ERROR}
 
     # ===== Step 8.6: Atomically reserve the unified progressive redeem limit =====
     from app.services.redemption_limit_service import reserve as _rl_reserve
     _rl_ok, _rl_snap, _rl_reason = await _rl_reserve(db, data.user_id, _prc_needed, f"recharge:{request_id}")
     if not _rl_ok:
-        await db.users.update_one({"uid": data.user_id}, {"$inc": {"prc_balance": total_prc}})
+        await _refund_recharge(pending_txn, _rl_reason, "recharge_limit")
         await db.recharge_transactions.update_one(
             {"request_id": request_id},
-            {"$set": {"status": "failed", "total_prc_deducted": 0, "prc_refunded": True,
-                      "eko_error": _rl_reason, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"status": "failed", "eko_error": _rl_reason, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
         return {"success": False, "message": _rl_reason, "error_ref": "R08R"}
 
@@ -1072,13 +1086,11 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
     - Low balance (347) / Service not enabled (463) / Internal errors (None) → Generic "Technical error"
     - All other Eko failures → Show actual Eko error message to user
     """
-    # Refund PRC
-    await db.users.update_one(
-        {"uid": data.user_id},
-        {"$inc": {"prc_balance": total_prc}}
-    )
+    # Refund PRC (idempotent, visible in PRC history)
+    await _refund_recharge({"request_id": request_id, "user_id": data.user_id, "total_prc_deducted": total_prc,
+                            "recharge_type": data.recharge_type, "amount_inr": data.amount, "eko_tid": tid},
+                           eko_message or "Recharge failed", "recharge_failure")
     logging.info(f"[RECHARGE] PRC refunded: {total_prc:.2f} to user {data.user_id}")
-    await _release_recharge_limit(data.user_id, request_id, tid)
 
     # Reverse any sustainability auto-burn applied for this transaction
     try:
@@ -1098,8 +1110,6 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
             {"request_id": request_id},
             {"$set": {
                 "status": "failed",
-                "total_prc_deducted": 0,
-                "prc_refunded": True,
                 "eko_tid": tid,
                 "eko_error": eko_message or "",
                 "eko_status": eko_status,
@@ -1225,6 +1235,8 @@ async def get_transaction_receipt(request_id: str, user_id: str = ""):
             "created_at": txn.get("created_at"),
             "updated_at": txn.get("updated_at"),
             "prc_refunded": txn.get("prc_refunded", False),
+            "prc_refund_amount": txn.get("prc_refund_amount"),
+            "refund_at": txn.get("refund_at"),
             "user_name": txn.get("user_name", ""),
             "user_mobile": txn.get("user_mobile", "")
         }
@@ -1360,25 +1372,11 @@ async def admin_enquiry_status(request_id: str):
             if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing"):
                 full_txn = await db.recharge_transactions.find_one(
                     {"request_id": request_id},
-                    {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "eko_tid": 1}
+                    {"_id": 0}
                 )
                 if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
-                    prc_amt = full_txn["total_prc_deducted"]
-                    await db.users.update_one(
-                        {"uid": full_txn["user_id"]},
-                        {"$inc": {"prc_balance": prc_amt}}
-                    )
-                    await _release_recharge_limit(full_txn["user_id"], request_id, full_txn.get("eko_tid"))
-                    await db.recharge_transactions.update_one(
-                        {"request_id": request_id},
-                        {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
-                    )
-                    await db.bill_payment_requests.update_one(
-                        {"request_id": request_id},
-                        {"$set": {"prc_refunded": True}}
-                    )
-                    prc_auto_refunded = True
-                    logging.info(f"[RECHARGE] Auto PRC refund: {prc_amt} PRC → user {full_txn['user_id']} (enquiry status change)")
+                    r = await _refund_recharge(full_txn, f"Eko status: {readable_status}", "eko_enquiry")
+                    prc_auto_refunded = bool(r.get("ok"))
 
         return {
             "success": True,
@@ -1481,19 +1479,10 @@ async def admin_check_all_pending():
                 if new_status in ("failed", "refund_pending", "refunded"):
                     full_txn = await db.recharge_transactions.find_one(
                         {"request_id": req_id},
-                        {"_id": 0, "user_id": 1, "total_prc_deducted": 1, "prc_refunded": 1, "eko_tid": 1}
+                        {"_id": 0}
                     )
                     if full_txn and not full_txn.get("prc_refunded") and full_txn.get("total_prc_deducted", 0) > 0:
-                        prc_amt = full_txn["total_prc_deducted"]
-                        await db.users.update_one(
-                            {"uid": full_txn["user_id"]},
-                            {"$inc": {"prc_balance": prc_amt}}
-                        )
-                        await _release_recharge_limit(full_txn["user_id"], req_id, full_txn.get("eko_tid"))
-                        await db.recharge_transactions.update_one(
-                            {"request_id": req_id},
-                            {"$set": {"prc_refunded": True, "refund_at": now_iso, "total_prc_deducted": 0}}
-                        )
+                        await _refund_recharge(full_txn, f"Eko status: {new_status}", "eko_bulk_enquiry")
 
                 updated_count += 1
                 results.append({"request_id": req_id, "old": "pending", "new": new_status, "eko_tid": eko_data.get("tid")})
@@ -1555,25 +1544,13 @@ async def admin_refund_prc(request_id: str, data: RefundRequest = RefundRequest(
 
     user_id = txn.get("user_id")
 
-    # Refund PRC to user
-    refund_result = await db.users.update_one(
-        {"uid": user_id},
-        {"$inc": {"prc_balance": prc_amount}}
-    )
-    if refund_result.modified_count == 0:
-        return {"success": False, "error": "User not found or PRC update failed"}
-    await _release_recharge_limit(user_id, request_id)
+    res = await _refund_recharge(txn, data.admin_note or "Admin refund", "admin_manual")
+    if not res.get("ok"):
+        return {"success": False, "error": "PRC already refunded for this transaction" if res.get("status") == "already_refunded" else f"Refund failed: {res.get('status')}"}
 
-    # Mark transaction as refunded
-    now_iso = datetime.now(timezone.utc).isoformat()
     await db.recharge_transactions.update_one(
         {"request_id": request_id},
-        {"$set": {
-            "prc_refunded": True,
-            "status": "refunded",
-            "refund_at": now_iso,
-            "admin_refund_note": data.admin_note
-        }}
+        {"$set": {"status": "refunded", "admin_refund_note": data.admin_note}}
     )
     # Also update bill_payment_requests if exists
     await db.bill_payment_requests.update_one(
@@ -1695,10 +1672,14 @@ async def _mark_refunded(tid: str, user_id: str, refund_data: dict, txn: dict):
         or 0
     )
     if not txn.get("prc_refunded") and prc_amt > 0:
-        await db.users.update_one(
-            {"uid": user_id},
-            {"$inc": {"prc_balance": prc_amt}}
-        )
+        from app.services.prc_refund_audit import refund_request
+        src = txn.get("_source_collection")
+        full = await db[src].find_one({"$or": [{"eko_tid": tid}, {"client_ref_id": tid}, {"eko_client_ref_id": tid}],
+                                       "user_id": user_id}, {"_id": 0}) if src else None
+        if full and full.get("request_id"):
+            await refund_request(db, src, full, prc_amt, "Eko refund completed (OTP)", "user_otp")
+        else:
+            await db.users.update_one({"uid": user_id}, {"$inc": {"prc_balance": prc_amt}})
         for coll_name, _src in REFUND_COLLECTIONS:
             await db[coll_name].update_many(
                 match_q,

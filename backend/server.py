@@ -37252,6 +37252,9 @@ api_router.include_router(admin_user360_router)
 # Include admin failed transactions router (NEW - March 2026)
 set_admin_failed_txn_db(db)
 api_router.include_router(admin_failed_txn_router)
+from routes.refund_audit import router as refund_audit_router, set_db as set_refund_audit_db
+set_refund_audit_db(db)
+api_router.include_router(refund_audit_router)
 set_admin_txn_db(db)
 api_router.include_router(admin_txn_router)
 

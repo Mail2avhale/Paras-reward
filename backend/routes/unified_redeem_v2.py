@@ -2221,16 +2221,15 @@ async def manual_refund_request(request_id: str, admin_id: str = "admin", reason
     user_id = request_doc["user_id"]
     refund_amount = request_doc["total_prc_deducted"]
     
-    # Manual refund using WalletService
-    refund_result = WalletService.credit(
-        user_id=user_id,
-        amount=refund_amount,
-        txn_type="refund",
-        description=f"Manual Refund: {reason}",
-        reference=request_id
-    )
-    new_balance = refund_result.get("balance_after", 0) if refund_result.get("success") else 0
-    logging.info(f"[REDEEM] Manual Refund {refund_amount} PRC via WalletService. Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
+    # Idempotent refund (atomic claim + ledger entry) — blocks double refunds
+    from app.services.prc_refund_audit import refund_request, _evidence
+    ev = (await _evidence(db, [request_id]))[request_id]
+    refund_result = await refund_request(db, "redeem_requests", request_doc, refund_amount, reason,
+                                         f"admin:{admin_id}", ev["debit_count"])
+    if not refund_result.get("ok"):
+        return {"success": False, "message": "PRC already refunded for this request"
+                if refund_result.get("status") == "already_refunded" else f"Refund failed: {refund_result.get('status')}"}
+    logging.info(f"[REDEEM] Manual Refund {refund_amount} PRC. Ledger TXN: {refund_result.get('txn_id', 'N/A')}")
     
     await db.redeem_requests.update_one(
         {"request_id": request_id},
@@ -2391,7 +2390,7 @@ async def get_bbps_requests(
         r["prc_refunded"] = r.get("prc_refunded", False)
 
     # Merge, deduplicate by request_id, sort
-    merged = rr_raw + bp_raw + rt_raw
+    merged = rr_raw + rt_raw + bp_raw
     seen_ids = set()
     unique = []
     for r in merged:
@@ -2425,9 +2424,14 @@ async def get_bbps_requests(
         except Exception as e:
             logging.warning(f"[BBPS list] batch user enrichment failed: {e}")
 
+    from app.services.prc_refund_audit import _evidence, classify, FAILED_STATUSES, REFUND_PENDING_STATUSES
+    _fail_like = set(FAILED_STATUSES + REFUND_PENDING_STATUSES + ["refunded"])
+    _ev = await _evidence(db, [r["request_id"] for r in page_results if r.get("request_id") and r.get("status") in _fail_like])
     requests = []
     for req in page_results:
-        req.pop("_source", None)
+        req["source_collection"] = req.pop("_source", None)
+        if req.get("request_id") in _ev:
+            req["refund_state"], req["refund_state_prc"] = classify(req, _ev[req["request_id"]])
         uid = req.get("user_id")
         if uid and not req.get("user_name"):
             user = users_by_uid.get(uid)
@@ -2555,16 +2559,11 @@ async def get_bbps_request_details(request_id: str):
     Admin: Get single BBPS request with complete details
     Searches both redeem_requests and bill_payment_requests collections.
     """
-    # Check redeem_requests first, then bill_payment_requests, then recharge_transactions
+    # recharge_transactions is authoritative for recharges (bill_payment_requests holds a mirror copy)
     request_doc = await db.redeem_requests.find_one(
         {"request_id": request_id},
         {"_id": 0}
     )
-    if not request_doc:
-        request_doc = await db.bill_payment_requests.find_one(
-            {"request_id": request_id},
-            {"_id": 0}
-        )
     if not request_doc:
         request_doc = await db.recharge_transactions.find_one(
             {"request_id": request_id},
@@ -2578,9 +2577,20 @@ async def get_bbps_request_details(request_id: str):
                 request_doc["amount"] = request_doc.get("amount_inr")
             request_doc["failure_reason"] = request_doc.get("eko_error", "")
             request_doc["prc_refunded"] = request_doc.get("prc_refunded", False)
+    if not request_doc:
+        request_doc = await db.bill_payment_requests.find_one(
+            {"request_id": request_id},
+            {"_id": 0}
+        )
     
     if not request_doc:
         raise HTTPException(status_code=404, detail="Request not found")
+    from app.services.prc_refund_audit import _evidence, classify, FAILED_STATUSES, REFUND_PENDING_STATUSES
+    _ev = (await _evidence(db, [request_id]))[request_id]
+    if request_doc.get("status") in set(FAILED_STATUSES + REFUND_PENDING_STATUSES + ["refunded"]):
+        refund_state, refund_state_prc = classify(request_doc, _ev)
+    else:
+        refund_state, refund_state_prc = "not_applicable", 0
     
     # Get user info
     user = await db.users.find_one(
@@ -2601,8 +2611,12 @@ async def get_bbps_request_details(request_id: str):
             "response": request_doc.get("eko_response")
         },
         "refund_info": {
-            "refunded": request_doc.get("prc_refunded", False),
-            "amount": request_doc.get("refund_amount") or request_doc.get("prc_required") or request_doc.get("total_prc_deducted") or 0
+            "refunded": refund_state == "refunded",
+            "state": refund_state,
+            "amount": refund_state_prc or request_doc.get("prc_refund_amount") or request_doc.get("refund_amount") or request_doc.get("total_prc_deducted") or 0,
+            "refunded_at": request_doc.get("refund_at") or request_doc.get("refunded_at"),
+            "ledger_debits": _ev["debits"],
+            "ledger_credits": _ev["credits"] + _ev["other_credit"],
         }
     }
 
