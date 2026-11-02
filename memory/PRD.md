@@ -3495,3 +3495,11 @@ Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
 - Stateless recompute auto-corrects past over-growth (users with used > new cap see 0 available).
 - Snapshot adds `subscription_active`, `is_paused`, `ever_subscribed`; UI shows "Paused" banner.
 - New admin read-only `POST /api/admin/redemption-limit/recalc-report` (admin token + admin_pin 969696) lists affected users (paginated: `skip`, `limit`≤1000, returns `next_skip`; prod has ~4k users, full scan timed out 504).
+
+## Oct 2026 — Failed-transaction PRC Refund Audit
+- Root causes: Mobile/DTH recharge debit+refund used raw `$inc` (no ledger → not in user PRC History); admin detail read bill_payment_requests mirror (showed "Refund PRC"/N/A); retry task re-debited and skipped refund (stale flag); refunds were check-then-act (double refund race); WalletServiceV2 used `$set` from stale balance (now `$inc`).
+- `app/services/prc_refund_audit.py`: classify (ledger debits vs refund credits, else flags), idempotent `refund_request` (unique `refund_events._id` + atomic `prc_refunded` claim + ledger credit + limit release), background `run_audit`, stuck >24h Eko check (refund only when Eko says failed), atomic run lock.
+- Routes `routes/refund_audit.py`: `/api/admin/refund-audit/run|latest|items|refund-one`, cron `/api/cron/refund-audit` (WEBHOOK_CRON_SECRET, `.emergent/crons.yml` every 2h, auto refunds ≤ 50,000 PRC).
+- Admin BBPS list/modal show refund_state (Refunded / Not Refunded / Needs Review / No PRC Deducted / Eko Refund Pending). User recharge history shows "PRC Refunded" badge; receipt shows refund amount.
+- /api/redeem/admin/*, /api/recharge/admin/*, /api/bbps/admin/* now require admin token.
+- Tests: /app/test_reports/iteration_313.json, iteration_314.json (100%).

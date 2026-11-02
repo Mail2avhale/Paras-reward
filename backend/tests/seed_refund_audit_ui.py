@@ -34,6 +34,9 @@ def seed():
     db.recharge_transactions.insert_one({"request_id": "TEST_UI-2", "user_id": U, "user_name": "TEST UI Refund", "status": "failed",
                                          "total_prc_deducted": 400, "recharge_type": "mobile", "amount_inr": 40, "number": "9000000888",
                                          "created_at": "2099-01-01T00:00:01+00:00"})
+    db.recharge_transactions.insert_one({"request_id": "TEST_UI-3", "user_id": U, "user_name": "TEST UI Refund", "status": "refund_pending",
+                                         "total_prc_deducted": 120, "recharge_type": "mobile", "amount_inr": 12, "number": "9000000888",
+                                         "created_at": "2099-01-01T00:00:02+00:00"})
     # explorer user's recharge history
     now = "2026-01-10T10:00:00+00:00"
     db.recharge_transactions.insert_one({"request_id": "TEST_UIU-1", "user_id": ex["uid"], "status": "failed", "total_prc_deducted": 0,

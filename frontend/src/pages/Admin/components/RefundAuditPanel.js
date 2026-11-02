@@ -126,7 +126,7 @@ const RefundAuditPanel = () => {
       )}
       {!running && run && pendingItems.length === 0 && (
         <p data-testid="audit-all-clear" className="text-sm text-emerald-700 font-semibold">
-          All failed transactions in the last scan are refunded.{s.review ? ` ${s.review} need manual review.` : ''}
+          All failed transactions in the last scan are refunded.{s.review ? ` ${s.review} ${s.review === 1 ? 'needs' : 'need'} manual review.` : ''}
         </p>
       )}
     </div>

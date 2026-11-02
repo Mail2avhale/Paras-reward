@@ -68,6 +68,13 @@ def seed():
     db.redeem_requests.insert_one({"request_id": P + "7", "user_id": U, "status": "pending", "total_prc_deducted": 50, "created_at": "2099-01-01T00:00:00+00:00"})
     # 8: completed redeem -> not_applicable
     db.redeem_requests.insert_one({"request_id": P + "8", "user_id": U, "status": "completed", "total_prc_deducted": 80, "created_at": TS})
+    # 11: refund_pending recharge -> eko_refund_pending
+    db.recharge_transactions.insert_one({"request_id": P + "11", "user_id": U, "status": "refund_pending", "total_prc_deducted": 120,
+                                         "recharge_type": "mobile", "amount_inr": 12, "created_at": TS})
+    # 12: stuck pending with datetime created_at (>24h)
+    from datetime import datetime, timezone, timedelta
+    db.recharge_transactions.insert_one({"request_id": P + "12", "user_id": U, "status": "pending", "total_prc_deducted": 10,
+                                         "recharge_type": "mobile", "created_at": datetime.now(timezone.utc) - timedelta(days=3)})
     yield
     _cleanup()
 
@@ -231,6 +238,56 @@ def test_unauth_refund_endpoints_probe():
     print("unauth recharge refund:", r.status_code, r.text[:120], "| unauth list:", r2.status_code)
     STATE["unauth"] = (r.status_code, r.text[:120], r2.status_code)
     assert r.status_code in (401, 403), f"UNAUTH refund allowed: {r.status_code} {r.text[:120]}"
+    assert r2.status_code == 401
+    for path in ("/api/redeem/admin/bbps-request/" + P + "1", "/api/bbps/admin/anything"):
+        assert requests.get(f"{BASE_URL}{path}").status_code == 401, path
+    assert requests.post(f"{BASE_URL}/api/redeem/admin/manual-refund/{P}10?admin_id=x&reason=y").status_code == 401
+    assert db.recharge_transactions.find_one({"request_id": P + "10"}).get("prc_refunded") is not True
+
+
+# Fix 2: refund_pending -> eko_refund_pending in list + detail
+def test_refund_pending_state(H):
+    rows = {x["request_id"]: x for x in requests.get(f"{BASE_URL}/api/redeem/admin/bbps-requests",
+            params={"search": "TEST_RFAT", "limit": 50}, headers=H).json()["requests"]}
+    print("P11 row:", {k: rows.get(P + "11", {}).get(k) for k in ("refund_state", "refund_state_prc", "status")})
+    assert rows[P + "11"]["refund_state"] == "eko_refund_pending"
+    d = requests.get(f"{BASE_URL}/api/redeem/admin/bbps-request/{P}11", headers=H).json()
+    assert d["refund_info"]["state"] == "eko_refund_pending", d["refund_info"]
+
+
+# Fix 4: stuck query handles datetime created_at
+def test_stuck_datetime_checked():
+    d = db.recharge_transactions.find_one({"request_id": P + "12"})
+    assert d["status"] == "pending"  # Eko not configured -> unknown, stays pending
+    run_ = db.refund_audit_runs.find_one({"_id": STATE["rid"]})
+    assert run_["summary"]["stuck_checked"] >= 1, run_["summary"]
+
+
+# Fix 3: atomic start_run
+def test_concurrent_start_run(H):
+    for _ in range(120):
+        if not db.refund_audit_runs.find_one({"status": "running"}):
+            break
+        time.sleep(1)
+    with ThreadPoolExecutor(5) as ex:
+        rs = list(ex.map(lambda _: requests.post(f"{BASE_URL}/api/admin/refund-audit/run", json={"apply": False}, headers=H), range(5)))
+    codes = [r.status_code for r in rs]
+    print("concurrent run codes", codes)
+    assert codes.count(200) == 1 and codes.count(409) == 4, codes
+    for _ in range(180):
+        time.sleep(1)
+        if not db.refund_audit_runs.find_one({"status": "running"}):
+            break
+    rid, r = run(H, False)
+    assert r["status"] == "done"
+
+
+# Fix 5: receipt total_prc_deducted fallback after recharge admin refund
+def test_receipt_deducted_fallback():
+    r = requests.get(f"{BASE_URL}/api/recharge/receipt/{P}9", params={"user_id": U}).json()
+    rc = r.get("receipt") or r.get("data") or r
+    print("receipt P9:", rc.get("total_prc_deducted"), rc.get("prc_refund_amount"))
+    assert rc.get("total_prc_deducted") == 40 and rc.get("prc_refund_amount") == 40
 
 
 # Cron auth + dedupe
