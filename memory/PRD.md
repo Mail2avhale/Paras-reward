@@ -3503,3 +3503,5 @@ Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
 - Admin BBPS list/modal show refund_state (Refunded / Not Refunded / Needs Review / No PRC Deducted / Eko Refund Pending). User recharge history shows "PRC Refunded" badge; receipt shows refund amount.
 - /api/redeem/admin/*, /api/recharge/admin/*, /api/bbps/admin/* now require admin token.
 - Tests: /app/test_reports/iteration_313.json, iteration_314.json (100%).
+- Nov 2 2026 hotfix: audit now checks prc_ledger.metadata.request_id refunds, skips `_migrated_from`/`_legacy_minimal` copies (refund_state "legacy_copy"), bank-type rows never auto/manual-refunded here (→ review), auto cap 10,000 PRC, no sort + throttled scan (prod DB load), heartbeat-based lock release (run idle >10 min = abandoned).
+- Prod findings (Nov 2): 426 March-2026 `retry_failed` bill/recharge redeems (179 users, ~47.86 lakh PRC) lost PRC due to retry_debit without re-refund (bug now fixed). Pending: refund after user confirmation. Bank-transfer legacy copies show failed BTRs with ledger debit but no refund credit — needs separate investigation in bank_transfer_requests.
