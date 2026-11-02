@@ -761,7 +761,7 @@ async def initiate_recharge(data: RechargeRequest):
         WalletServiceV2.debit, data.user_id, total_prc, "recharge",
         f"Redeem: {_rlabel} - ₹{int_amount}", request_id,
         "mobile_recharge" if data.recharge_type == "mobile" else "dth_recharge",
-        {"skip_service_charge": True},
+        True, {"skip_service_charge": True},
     )
     if not deduct_result.get("success"):
         logging.warning(f"[RECHARGE] Atomic PRC deduction failed for {data.user_id}: {deduct_result.get('error')}")
