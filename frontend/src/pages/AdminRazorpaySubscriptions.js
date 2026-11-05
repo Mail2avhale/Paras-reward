@@ -871,7 +871,6 @@ const AdminRazorpaySubscriptions = ({ user }) => {
             <button
               key={filter.id}
               onClick={() => { setStatusFilter(filter.id); setCurrentPage(1); }}
-              onClick={() => setStatusFilter(filter.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                 statusFilter === filter.id
                   ? 'bg-amber-500 text-black'

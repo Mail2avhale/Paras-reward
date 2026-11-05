@@ -72,3 +72,15 @@ function loadOnce() {
 }
 
 export default ensureRazorpayLoaded;
+
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+
+// Razorpay rejects the whole payment if prefill email/contact is malformed — send only valid values.
+export function buildPrefill(u) {
+  const email = String(u?.email || '').trim().toLowerCase();
+  const digits = String(u?.mobile || u?.phone || '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+  const prefill = { name: String(u?.full_name || u?.name || '').trim() };
+  if (EMAIL_RE.test(email)) prefill.email = email;
+  if (/^[6-9]\d{9}$/.test(digits)) prefill.contact = digits;
+  return prefill;
+}

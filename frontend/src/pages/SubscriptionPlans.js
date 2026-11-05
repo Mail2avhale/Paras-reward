@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { buildPrefill } from '../lib/razorpay';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ImageUpload from '@/components/ImageUpload';
 import { validateUTR, formatUTR } from '@/utils/indianValidation';
@@ -351,11 +352,7 @@ const SubscriptionPlans = ({ user }) => {
             }
           }
         },
-        prefill: {
-          name: userData?.full_name || userData?.name || '',
-          email: userData?.email || '',
-          contact: userData?.mobile || ''
-        },
+        prefill: buildPrefill(userData),
         theme: {
           color: '#F59E0B'
         },

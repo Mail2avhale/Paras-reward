@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, IndianRupee, CheckCircle, Clock, Loader2, Zap, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
-import { ensureRazorpayLoaded } from '../lib/razorpay';
+import { ensureRazorpayLoaded, buildPrefill } from '../lib/razorpay';
 import { isNativePlatform } from '@/utils/nativeUx';
 
 const fmt = (n) => `₹ ${(Number(n) || 0).toFixed(2)}`;
@@ -97,7 +97,7 @@ const MyServiceCharges = ({ user }) => {
         name: 'Paras Rewards',
         description: `Service Charge · ${charge.charge_id}`,
         ...(runningInWebView ? { webview_intent: true } : {}),
-        prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+        prefill: buildPrefill(user),
         theme: { color: '#f59e0b' },
         handler: async (resp) => {
           try {
@@ -144,7 +144,7 @@ const MyServiceCharges = ({ user }) => {
         name: 'Paras Rewards',
         description: `Bulk Service Charge · ${order.charge_count} charges`,
         ...(runningInWebView ? { webview_intent: true } : {}),
-        prefill: { name: user?.name, email: user?.email, contact: user?.mobile },
+        prefill: buildPrefill(user),
         theme: { color: '#0ea5e9' },
         modal: { ondismiss: () => setBulkPaying(false) },
         handler: async (resp) => {
