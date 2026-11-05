@@ -652,6 +652,7 @@ async def initiate_recharge(data: RechargeRequest):
             "user_id": data.user_id,
             "created_at": {"$gte": month_start},
             "service_type": {"$in": MONTHLY_LIMIT_SERVICES},
+            "_migrated_from": {"$nin": ["recharge_transactions", "bill_payment_requests"]},
             "status": {"$in": [
                 "completed", "COMPLETED", "Completed",
                 "approved", "APPROVED", "Approved",
@@ -1168,6 +1169,7 @@ async def get_recharge_history(user_id: str):
             "user_id": user_id,
             "created_at": {"$gte": month_start},
             "service_type": {"$in": MONTHLY_LIMIT_SERVICES},
+            "_migrated_from": {"$nin": ["recharge_transactions", "bill_payment_requests"]},
             "status": {"$in": ["completed", "COMPLETED", "Completed", "approved", "APPROVED", "success", "SUCCESS", "paid", "PAID", "Paid", "processing", "PROCESSING"]}
         }},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}}}

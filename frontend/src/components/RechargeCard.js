@@ -476,6 +476,17 @@ const RechargeCard = ({ user, stats }) => {
             className="w-full bg-[#2A313B] border border-[#3E4754] rounded-lg pl-7 pr-3 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#4F8DE0] transition-colors"
           />
         </div>
+        {maxAllowed <= 0 ? (
+          <p className="text-red-400 text-[11px] mt-1 pl-1" data-testid="recharge-cap-reached">
+            {monthlyRemaining <= 0
+              ? 'Monthly recharge & bill limit (₹1,500) reached. You can recharge again next month.'
+              : 'Daily recharge limit (₹500) reached. You can recharge again tomorrow.'}
+          </p>
+        ) : maxAllowed < 500 && (
+          <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-max-allowed">
+            Maximum you can enter now: ₹{maxAllowed}
+          </p>
+        )}
         {prcEstimate > 0 && (
           <>
           <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-prc-estimate">

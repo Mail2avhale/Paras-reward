@@ -1114,6 +1114,7 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 "user_id": request.user_id,
                 "created_at": {"$gte": month_start_dt},
                 "service_type": {"$in": MONTHLY_UTILITY_TYPES},
+                "_migrated_from": {"$nin": ["recharge_transactions", "bill_payment_requests"]},
                 "status": {"$in": [
                     "completed", "COMPLETED", "Completed",
                     "approved", "APPROVED", "Approved",
@@ -1249,10 +1250,12 @@ async def create_redeem_request(request: RedeemRequestCreate):
                 "service_type": service_filter
             }
         },
+        {"$group": {"_id": {"$ifNull": ["$_legacy_request_id", {"$ifNull": ["$request_id", "$_id"]}]},
+                    "amt": {"$first": {"$ifNull": ["$amount_inr", "$amount"]}}}},
         {
             "$group": {
                 "_id": None,
-                "total_amount": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}
+                "total_amount": {"$sum": "$amt"}
             }
         }
     ]

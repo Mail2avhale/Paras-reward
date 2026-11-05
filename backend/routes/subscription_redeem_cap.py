@@ -94,7 +94,10 @@ async def _sum_governed_used_inr(user_id: str) -> float:
             "service_type": {"$in": GOVERNED_SERVICE_TYPES},
             "status": {"$in": REDEEM_SUCCESS_STATUSES},
         }},
-        {"$group": {"_id": None, "inr": {"$sum": {"$ifNull": ["$amount_inr", "$amount"]}}}},
+        # A recharge is mirrored twice (recharge_transactions + bill_payment_requests) — count once
+        {"$group": {"_id": {"$ifNull": ["$_legacy_request_id", {"$ifNull": ["$request_id", "$_id"]}]},
+                    "amt": {"$first": {"$ifNull": ["$amount_inr", "$amount"]}}}},
+        {"$group": {"_id": None, "inr": {"$sum": "$amt"}}},
     ]
     cursor = db.redeem_requests.aggregate(pipeline)
     async for row in cursor:
