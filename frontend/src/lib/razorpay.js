@@ -16,6 +16,14 @@ const LOAD_TIMEOUT_MS = 12000;
 let _loadingPromise = null;
 
 export function ensureRazorpayLoaded() {
+  return loadOnce().catch(
+    () => new Promise((r) => setTimeout(r, 1500)).then(loadOnce),
+  ).catch(() => {
+    throw new Error('Could not open the payment window. Please check your internet connection and try again.');
+  });
+}
+
+function loadOnce() {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('No window (SSR)'));
   }

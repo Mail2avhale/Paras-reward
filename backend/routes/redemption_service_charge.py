@@ -102,6 +102,32 @@ async def get_config() -> dict:
     return {**DEFAULT_CONFIG, **row}
 
 
+ORDER_REUSE_MINUTES = 30
+ATTEMPT_RESET_MINUTES = 30
+
+
+def _minutes_since(iso) -> float:
+    try:
+        dt = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt).total_seconds() / 60
+    except Exception:
+        return 1e9
+
+
+async def _attempts_available(charge: dict, cfg: dict) -> bool:
+    """Attempt cap is a rolling window: after ATTEMPT_RESET_MINUTES of no new orders it resets."""
+    if charge.get("payment_attempts", 0) < cfg["max_payment_attempts"]:
+        return True
+    if _minutes_since(charge.get("last_order_at") or charge.get("updated_at")) >= ATTEMPT_RESET_MINUTES:
+        await db.redemption_service_charges.update_one(
+            {"charge_id": charge["charge_id"], "status": "PENDING"}, {"$set": {"payment_attempts": 0}})
+        charge["payment_attempts"] = 0
+        return True
+    return False
+
+
 async def _audit(charge_id: str, action: str, old_status: str, new_status: str,
                  user_id: Optional[str], admin_id: Optional[str] = None,
                  reason: str = "", meta: Optional[dict] = None):
@@ -493,8 +519,6 @@ async def create_payment_order(data: CreatePaymentRequest):
         raise HTTPException(status_code=400, detail=f"Charge status is {charge['status']}, not PENDING")
 
     cfg = await get_config()
-    if charge["payment_attempts"] >= cfg["max_payment_attempts"]:
-        raise HTTPException(status_code=429, detail="Max payment attempts reached. Contact support.")
 
     # Sanity: Razorpay env vars must be present regardless of whether we
     # reuse an existing order or create a new one (bug testing agent flag).
@@ -507,8 +531,10 @@ async def create_payment_order(data: CreatePaymentRequest):
             detail="Payment service is temporarily unavailable. Admin: check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.",
         )
 
-    # Idempotent: reuse open order if it exists
-    if charge.get("payment_order_id"):
+    # Idempotent: reuse this charge's own recent single order (never a bulk order — amount differs)
+    if (charge.get("payment_order_id") and charge.get("payment_order_type", "single") == "single"
+            and not charge.get("bulk_pay_receipt")
+            and _minutes_since(charge.get("last_order_at") or charge.get("updated_at")) < ORDER_REUSE_MINUTES):
         return {
             "order_id": charge["payment_order_id"],
             "amount": int(charge["total_payable"] * 100),
@@ -517,6 +543,8 @@ async def create_payment_order(data: CreatePaymentRequest):
             "razorpay_key": key_id,
             "reused": True,
         }
+    if not await _attempts_available(charge, cfg):
+        raise HTTPException(status_code=429, detail=f"Too many payment attempts. Please try again after {ATTEMPT_RESET_MINUTES} minutes.")
 
     # Create Razorpay order
     try:
@@ -536,8 +564,10 @@ async def create_payment_order(data: CreatePaymentRequest):
             {"charge_id": data.charge_id},
             {"$set": {
                 "payment_order_id": order["id"],
+                "payment_order_type": "single",
+                "last_order_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-            }, "$inc": {"payment_attempts": 1}},
+            }, "$unset": {"bulk_pay_receipt": ""}, "$inc": {"payment_attempts": 1}},
         )
         await _audit(data.charge_id, "payment_order_created", "PENDING", "PENDING",
                      charge["user_id"], meta={"order_id": order["id"]})
@@ -659,12 +689,20 @@ async def create_bulk_pay_order(data: BulkPayOrderRequest):
         raise HTTPException(status_code=404, detail="No pending charges to pay")
 
     cfg = await get_config()
-    # Skip charges whose attempt counter is maxed out
-    payable = [c for c in pending if c.get("payment_attempts", 0) < cfg["max_payment_attempts"]]
+    total_all = sum(int(round(c["total_payable"] * 100)) for c in pending)
+    ids_all = [c["charge_id"] for c in pending]
+    # Reuse the open bulk order if it covers exactly the same charges (no new attempt burned)
+    oid = pending[0].get("payment_order_id")
+    if (oid and all(c.get("payment_order_id") == oid and c.get("payment_order_type") == "bulk" for c in pending)
+            and _minutes_since(pending[0].get("last_order_at")) < ORDER_REUSE_MINUTES):
+        return {"order_id": oid, "amount": total_all, "currency": "INR", "charge_ids": ids_all,
+                "charge_count": len(ids_all), "razorpay_key": os.environ.get("RAZORPAY_KEY_ID", ""),
+                "bulk_receipt": pending[0].get("bulk_pay_receipt"), "reused": True}
+    payable = [c for c in pending if await _attempts_available(c, cfg)]
     if not payable:
         raise HTTPException(
             status_code=429,
-            detail="All pending charges have exceeded max payment attempts. Contact support.",
+            detail=f"Too many payment attempts. Please try again after {ATTEMPT_RESET_MINUTES} minutes.",
         )
 
     total_paise = sum(int(round(c["total_payable"] * 100)) for c in payable)
@@ -711,7 +749,9 @@ async def create_bulk_pay_order(data: BulkPayOrderRequest):
         {"charge_id": {"$in": charge_ids}, "status": "PENDING"},
         {"$set": {
             "payment_order_id": order["id"],
+            "payment_order_type": "bulk",
             "bulk_pay_receipt": bulk_receipt,
+            "last_order_at": now_iso,
             "updated_at": now_iso,
         }, "$inc": {"payment_attempts": 1}},
     )

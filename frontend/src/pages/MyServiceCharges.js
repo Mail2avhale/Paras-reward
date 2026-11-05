@@ -118,7 +118,7 @@ const MyServiceCharges = ({ user }) => {
       const status = e?.response?.status;
       const netErr = !e?.response;
       const msg = detail
-        || (netErr && `Network error — cannot reach payment server${e?.message ? ` (${e.message})` : ''}`)
+        || (netErr && (e?.message || 'Network error. Please check your internet connection and try again.'))
         || (status && `Order create failed (HTTP ${status})`)
         || 'Order create failed';
       toast.error(msg, { duration: 8000 });
@@ -177,7 +177,7 @@ const MyServiceCharges = ({ user }) => {
       const status = e?.response?.status;
       const netErr = !e?.response;
       const msg = detail
-        || (netErr && `Network error — cannot reach payment server${e?.message ? ` (${e.message})` : ''}`)
+        || (netErr && (e?.message || 'Network error. Please check your internet connection and try again.'))
         || (status && `Bulk order create failed (HTTP ${status})`)
         || 'Bulk order create failed';
       toast.error(msg, { duration: 8000 });
