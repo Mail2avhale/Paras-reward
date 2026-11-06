@@ -2393,7 +2393,7 @@ async def get_bbps_requests(
         r["prc_refunded"] = r.get("prc_refunded", False)
 
     # Merge, deduplicate by request_id, sort
-    merged = rr_raw + rt_raw + bp_raw
+    merged = rt_raw + rr_raw + bp_raw  # recharge_transactions first: redeem_requests may hold stale legacy copies
     seen_ids = set()
     unique = []
     for r in merged:
@@ -2564,7 +2564,7 @@ async def get_bbps_request_details(request_id: str):
     """
     # recharge_transactions is authoritative for recharges (bill_payment_requests holds a mirror copy)
     request_doc = await db.redeem_requests.find_one(
-        {"request_id": request_id},
+        {"request_id": request_id, "_migrated_from": {"$exists": False}},
         {"_id": 0}
     )
     if not request_doc:
@@ -2585,6 +2585,8 @@ async def get_bbps_request_details(request_id: str):
             {"request_id": request_id},
             {"_id": 0}
         )
+    if not request_doc:
+        request_doc = await db.redeem_requests.find_one({"request_id": request_id}, {"_id": 0})
     
     if not request_doc:
         raise HTTPException(status_code=404, detail="Request not found")

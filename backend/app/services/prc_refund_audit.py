@@ -212,6 +212,28 @@ async def _resolve_stuck(db, coll, doc):
     return "eko_unknown"
 
 
+async def _recheck_recent_success(db, run_id, summary, hours=72, every_hours=6, limit=200):
+    """Operators can reverse a recharge after Eko first said success — re-verify recent successes."""
+    from routes import eko_recharge as er
+    if not er._eko_configured():
+        return
+    now = datetime.now(timezone.utc)
+    q = {"status": "success", "created_at": {"$gte": (now - timedelta(hours=hours)).isoformat()},
+         "$or": [{"eko_recheck_at": {"$exists": False}},
+                 {"eko_recheck_at": {"$lt": (now - timedelta(hours=every_hours)).isoformat()}}]}
+    summary.setdefault("success_rechecked", 0)
+    summary.setdefault("reversed_found", 0)
+    async for d in db.recharge_transactions.find(q, {"_id": 0, "request_id": 1}).limit(limit):
+        res = await er.admin_enquiry_status(d["request_id"])
+        await db.recharge_transactions.update_one({"request_id": d["request_id"]}, {"$set": {"eko_recheck_at": _now()}})
+        summary["success_rechecked"] += 1
+        if res.get("status_changed") and res.get("new_status") in ("failed", "refund_pending", "refunded"):
+            summary["reversed_found"] += 1
+        if summary["success_rechecked"] % 10 == 0:
+            await db.refund_audit_runs.update_one({"_id": run_id}, {"$set": {"updated_at": _now(), "summary": summary}})
+        await asyncio.sleep(0.3)
+
+
 async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck_limit=100):
     """Scan, classify and (optionally) refund. Progress stored in refund_audit_runs."""
     await ensure_indexes(db)
@@ -225,6 +247,8 @@ async def run_audit(db, run_id, apply=False, auto=False, check_stuck=True, stuck
         stuck_cut = (datetime.now(timezone.utc) - timedelta(hours=STUCK_AFTER_HOURS)).isoformat()
         stuck_done = 0
         seen = set()
+        if check_stuck:
+            await _recheck_recent_success(db, run_id, summary)
         for coll in COLLS:
             summary["already_refunded"] += await db[coll].count_documents(
                 {"status": {"$in": FAILED_STATUSES + ["refunded"]}, "prc_refunded": True})

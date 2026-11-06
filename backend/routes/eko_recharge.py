@@ -1369,9 +1369,14 @@ async def admin_enquiry_status(request_id: str):
             logging.info(f"[RECHARGE] Status updated: {old_status} → {new_status} for {request_id}")
             if new_status == "success":
                 await _raise_recharge_service_charge(txn)
+            if old_status == "success" and new_status in ("failed", "refund_pending", "refunded"):
+                logging.warning(f"[RECHARGE] Late reversal by Eko: {request_id} success → {new_status}")
+                await db.recharge_transactions.update_one(
+                    {"request_id": request_id},
+                    {"$set": {"reversed_after_success": True, "reversed_at": now_iso}})
 
-            # Auto-refund PRC when transitioning to failed/refund_pending/refunded from pending
-            if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing"):
+            # Auto-refund PRC when Eko says failed/refunded — including late operator reversals of a "success"
+            if new_status in ("failed", "refund_pending", "refunded") and old_status in ("pending", "processing", "success"):
                 full_txn = await db.recharge_transactions.find_one(
                     {"request_id": request_id},
                     {"_id": 0}

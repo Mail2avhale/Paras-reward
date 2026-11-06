@@ -109,6 +109,16 @@ async def eko_transaction_callback(request: Request):
             
             await db.eko_callbacks.insert_one(callback_record)
             logging.info(f"[EKO CALLBACK] Stored in database")
+
+            # Mobile/DTH recharge: re-verify with Eko enquiry (never trust callback body alone)
+            rt_q = [{"eko_tid": str(tid)}] if tid else []
+            if client_ref_id:
+                rt_q.append({"client_ref_id": client_ref_id})
+            rt = await db.recharge_transactions.find_one({"$or": rt_q}, {"_id": 0, "request_id": 1}) if rt_q else None
+            if rt:
+                from routes.eko_recharge import admin_enquiry_status
+                res = await admin_enquiry_status(rt["request_id"])
+                logging.info(f"[EKO CALLBACK] Recharge {rt['request_id']} re-verified: {res.get('old_status')} → {res.get('new_status')}")
             
             # Update related redeem request if exists
             if client_ref_id:
