@@ -13,6 +13,8 @@ def seed():
     sdb.ledger.insert_one({"txn_id": "TST-" + uuid.uuid4().hex, "user_id": U, "reference": RID, "entry_type": "debit", "amount": 3090, "txn_type": "recharge"})
     sdb.redemption_service_charges.insert_one({"charge_id": "TREV-SC", "user_id": U, "redemption_id": RID, "status": "PENDING", "total_payable": 70})
 class R:
+    status_code = 200
+    text = "{}"
     def json(self): return {"status": 0, "data": {"tx_status": "4", "tid": "999"}}
 class C:
     def __init__(self, *a, **k): pass

@@ -234,6 +234,30 @@ def _generate_headers(timestamp: str) -> dict:
     }
 
 
+async def _eko_enquiry(txn: dict, debug: bool = False):
+    """Transaction enquiry trying Eko's known path variants; returns (json|None, attempts)."""
+    tid, ref = txn.get("eko_tid"), txn.get("client_ref_id")
+    ids = ([str(tid)] if tid and str(tid) not in ("N/A", "None", "null") else []) + ([f"client_ref_id:{ref}"] if ref else [])
+    attempts = []
+    for lookup in ids:
+        for ver, params in (("v1", {"initiator_id": INITIATOR_ID, "user_code": USER_CODE}), ("v2", {"initiator_id": INITIATOR_ID})):
+            ts = str(round(time.time() * 1000))
+            headers = {"developer_key": DEVELOPER_KEY, "secret-key": _generate_secret_key(ts),
+                       "secret-key-timestamp": ts, "Accept": "application/json"}
+            try:
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    r = await client.get(f"{BASE_URL}/{ver}/transactions/{lookup}", headers=headers, params=params)
+                body = r.text
+                attempts.append({"variant": f"{ver}:{lookup}", "http": r.status_code, "body": body[:300]})
+                data = r.json()
+                if isinstance(data, dict) and isinstance(data.get("data"), dict) and "tx_status" in data["data"]:
+                    return data, attempts
+            except Exception as e:
+                attempts.append({"variant": f"{ver}:{lookup}", "error": str(e)[:150]})
+    logging.warning(f"[RECHARGE] Eko enquiry failed for {txn.get('request_id')}: {attempts}")
+    return None, attempts
+
+
 def _generate_form_headers(timestamp: str) -> dict:
     return {
         "developer_key": DEVELOPER_KEY,
@@ -1281,6 +1305,16 @@ async def retry_failed_recharge(request_id: str, data: RetryRequest):
 
 # ===== ADMIN: Fetch Transaction Status from Eko =====
 
+@router.get("/admin/enquiry-debug/{request_id}")
+async def admin_enquiry_debug(request_id: str):
+    """Admin: raw Eko enquiry attempts (status codes + body snippets) for troubleshooting."""
+    txn = await db.recharge_transactions.find_one({"request_id": request_id}, {"_id": 0, "request_id": 1, "eko_tid": 1, "client_ref_id": 1})
+    if not txn:
+        return {"success": False, "error": "Transaction not found"}
+    result, attempts = await _eko_enquiry(txn)
+    return {"success": result is not None, "result": result, "attempts": attempts}
+
+
 @router.get("/admin/enquiry/{request_id}")
 async def admin_enquiry_status(request_id: str):
     """
@@ -1307,19 +1341,10 @@ async def admin_enquiry_status(request_id: str):
         return {"success": False, "error": "No TID or reference ID available"}
 
     try:
-        timestamp = str(round(time.time() * 1000))
-        headers = _generate_headers(timestamp)
-
-        url = f"{BASE_URL}/v1/transactions/{lookup_id}"
         logging.info(f"[RECHARGE] Admin enquiry: request={request_id}, lookup={lookup_id}")
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, headers=headers, params={
-                "initiator_id": INITIATOR_ID,
-                "user_code": USER_CODE
-            })
-
-        result = response.json()
+        result, _attempts = await _eko_enquiry(txn)
+        if result is None:
+            return {"success": False, "error": "Eko enquiry returned no status", "attempts": _attempts}
         eko_status = result.get("status")
         eko_data = result.get("data", {})
         tx_status = _parse_tx_status(eko_data.get("tx_status"))
@@ -1441,17 +1466,10 @@ async def admin_check_all_pending():
             continue
 
         try:
-            timestamp = str(round(time.time() * 1000))
-            headers = _generate_headers(timestamp)
-            url = f"{BASE_URL}/v1/transactions/{lookup_id}"
-
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(url, headers=headers, params={
-                    "initiator_id": INITIATOR_ID,
-                    "user_code": USER_CODE
-                })
-
-            result = response.json()
+            result, _attempts = await _eko_enquiry(txn)
+            if result is None:
+                results.append({"request_id": req_id, "status": "error", "reason": "Eko enquiry returned no status"})
+                continue
             eko_data = result.get("data", {})
             tx_status = _parse_tx_status(eko_data.get("tx_status"))
             now_iso = datetime.now(timezone.utc).isoformat()

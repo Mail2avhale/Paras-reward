@@ -176,25 +176,13 @@ async def refund_request(db, coll, doc, amount, reason, source, debit_count=0):
 
 async def _eko_lookup(doc):
     """Return Eko tx_status int or None."""
-    import httpx
-    import time
     from routes import eko_recharge as er
     if not er._eko_configured():
         return None
-    tid = doc.get("eko_tid") or doc.get("tid")
-    ref = doc.get("client_ref_id") or doc.get("eko_client_ref_id")
-    lookup = tid if tid and str(tid) not in ("N/A", "null", "None") else (f"client_ref_id:{ref}" if ref else None)
-    if not lookup:
-        return None
-    try:
-        headers = er._generate_headers(str(round(time.time() * 1000)))
-        async with httpx.AsyncClient(timeout=15.0) as c:
-            r = await c.get(f"{er.BASE_URL}/v1/transactions/{lookup}", headers=headers,
-                            params={"initiator_id": er.INITIATOR_ID, "user_code": er.USER_CODE})
-        return er._parse_tx_status((r.json().get("data") or {}).get("tx_status"))
-    except Exception as e:
-        logging.warning(f"[REFUND-AUDIT] Eko lookup failed for {doc.get('request_id')}: {e}")
-        return None
+    txn = {"request_id": doc.get("request_id"), "eko_tid": doc.get("eko_tid") or doc.get("tid"),
+           "client_ref_id": doc.get("client_ref_id") or doc.get("eko_client_ref_id")}
+    result, _ = await er._eko_enquiry(txn)
+    return er._parse_tx_status((result or {}).get("data", {}).get("tx_status")) if result else None
 
 
 async def _resolve_stuck(db, coll, doc):
