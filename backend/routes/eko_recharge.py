@@ -27,7 +27,7 @@ import re
 import base64
 import hashlib
 import hmac
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import httpx
 import asyncio
 from app.services.wallet_service_v2 import WalletServiceV2
@@ -80,6 +80,7 @@ if USER_CODE == "20810200":
     USER_CODE = "19560001"
 SOURCE_IP = os.environ.get("EKO_SOURCE_IP", "34.44.149.98")
 DEFAULT_LATLONG = "19.9975,73.7898"
+LOW_BALANCE_PAUSE_MIN = 15
 
 MAX_RECHARGE_AMOUNT = 500
 MAX_DAILY_TOTAL = 500
@@ -779,6 +780,12 @@ async def initiate_recharge(data: RechargeRequest):
     if user_prc < total_prc:
         return {"success": False, "message": f"Insufficient PRC balance. Required: {total_prc:.0f} PRC", "error_ref": "R07"}
 
+    # ===== Step 7.9: Eko wallet low-balance circuit breaker =====
+    _lb = await db.system_flags.find_one({"_id": "eko_low_balance"})
+    if _lb and _lb.get("until", "") > datetime.now(timezone.utc).isoformat() and float(data.amount) >= float(_lb.get("last_amount") or 0):
+        return {"success": False, "error_ref": "R07LB",
+                "message": "Recharge service is temporarily unavailable. Please try again after some time. No PRC was deducted."}
+
     # ===== Step 8: Atomic PRC deduction =====
     request_id = str(uuid.uuid4())
     _rlabel = "Mobile Recharge" if data.recharge_type == "mobile" else "DTH Recharge"
@@ -1111,6 +1118,14 @@ async def _handle_failure(data, request_id, client_ref_id, tid,
     - Low balance (347) / Service not enabled (463) / Internal errors (None) → Generic "Technical error"
     - All other Eko failures → Show actual Eko error message to user
     """
+    if eko_status == 347 or "low balance" in str(eko_message or "").lower():
+        _until = (datetime.now(timezone.utc) + timedelta(minutes=LOW_BALANCE_PAUSE_MIN)).isoformat()
+        await db.system_flags.update_one(
+            {"_id": "eko_low_balance"},
+            {"$set": {"until": _until, "last_seen_at": now_iso, "last_amount": data.amount}, "$inc": {"hits": 1}},
+            upsert=True)
+        logging.error(f"[RECHARGE] Eko LOW BALANCE — recharges paused until {_until}")
+
     # Refund PRC (idempotent, visible in PRC history)
     await _refund_recharge({"request_id": request_id, "user_id": data.user_id, "total_prc_deducted": total_prc,
                             "recharge_type": data.recharge_type, "amount_inr": data.amount, "eko_tid": tid},
@@ -1304,6 +1319,19 @@ async def retry_failed_recharge(request_id: str, data: RetryRequest):
 
 
 # ===== ADMIN: Fetch Transaction Status from Eko =====
+
+@router.get("/admin/low-balance")
+async def admin_low_balance_status():
+    f = await db.system_flags.find_one({"_id": "eko_low_balance"}, {"_id": 0}) or {}
+    f["active"] = f.get("until", "") > datetime.now(timezone.utc).isoformat()
+    return f
+
+
+@router.post("/admin/low-balance/clear")
+async def admin_low_balance_clear():
+    await db.system_flags.update_one({"_id": "eko_low_balance"}, {"$set": {"until": ""}}, upsert=True)
+    return {"success": True}
+
 
 @router.get("/admin/enquiry-debug/{request_id}")
 async def admin_enquiry_debug(request_id: str):

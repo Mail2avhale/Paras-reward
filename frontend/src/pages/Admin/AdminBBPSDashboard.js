@@ -14,6 +14,7 @@ import {
 import BBPSDetailModal from './components/BBPSDetailModal';
 import BBPSReconcilePanel from './components/BBPSReconcilePanel';
 import RefundAuditPanel from './components/RefundAuditPanel';
+import EkoPauseBanner from './components/EkoPauseBanner';
 import { RefundStateBadge } from './components/RefundState';
 
 import { API } from "../../lib/api";
@@ -518,6 +519,7 @@ const AdminBBPSDashboard = () => {
       </div>
 
 
+      <EkoPauseBanner />
       <RefundAuditPanel />
 
       {/* Eko Reconciliation Panel (extracted to BBPSReconcilePanel.js) */}
