@@ -3524,3 +3524,4 @@ Example: base 4.5% (L10) × 1.25 = **5.625%** for a District Leader.
 - Removed unused @capacitor/assets devDependency (frontend build failure).
 - Desktop/tablet: user pages constrained to a 520px centered column (body.user-shell), admin/manager/employee/partner-store/blog/landing stay full width.
 - Pending: "Used PRC" ref-dedup fix (seed all ref fields, not only first), invoice cleanup (paused), live ₹10 v3 recharge test on 9936606966 Jio.
+- AAB "signed with wrong key" (Play expects upload SHA1 A6:32:21:A0:5A:FA:66:7D…, got 69:FC:F6:8E…): signing comes only from GitHub secret KEYSTORE_BASE64. Added workflow step "Verify upload key fingerprint" (prints SHA1, fails if != EXPECTED_UPLOAD_SHA1 secret) + uploads `upload-certificate-pem` artifact for Play upload key reset.

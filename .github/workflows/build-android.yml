@@ -178,6 +178,42 @@ jobs:
           git commit -m "chore(android): auto-update assetlinks.json with signing SHA-256 [skip ci]"
           git push origin HEAD:main
 
+      # ── 7c. VERIFY UPLOAD KEY + EXPORT CERTIFICATE ─────────────────────────
+      # Prints the keystore SHA1 and fails early if it does not match the
+      # EXPECTED_UPLOAD_SHA1 secret (Play Console → App integrity → Upload key).
+      # Also exports upload_certificate.pem (needed for a Play upload key reset).
+      - name: Verify upload key fingerprint
+        working-directory: frontend
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          EXPECTED_UPLOAD_SHA1: ${{ secrets.EXPECTED_UPLOAD_SHA1 }}
+        run: |
+          set -e
+          SHA1=$(keytool -list -v -keystore android/keystores/paras-reward.keystore \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk '/SHA1:/ {print $2; exit}')
+          echo "✓ Keystore upload key SHA1: $SHA1"
+          keytool -export -rfc -keystore android/keystores/paras-reward.keystore \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" -file upload_certificate.pem
+          if [ -n "$EXPECTED_UPLOAD_SHA1" ]; then
+            EXP=$(echo "$EXPECTED_UPLOAD_SHA1" | tr 'a-f' 'A-F' | tr -d ' ')
+            if [ "$SHA1" != "$EXP" ]; then
+              echo "::error::Keystore SHA1 $SHA1 does not match Play Console upload key $EXP. KEYSTORE_BASE64 secret has the WRONG keystore."
+              exit 1
+            fi
+            echo "✓ Matches Play Console upload key"
+          else
+            echo "::warning::EXPECTED_UPLOAD_SHA1 secret not set — skipping match check."
+          fi
+
+      - name: Upload certificate (for Play upload key reset)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: upload-certificate-pem
+          path: frontend/upload_certificate.pem
+          if-no-files-found: ignore
+
       # ── 8. BUILD SIGNED AAB ────────────────────────────────────────────────
       - name: Ensure Gradle wrapper is usable
         working-directory: frontend/android
