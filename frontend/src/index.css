@@ -933,3 +933,21 @@ input[type="range"]::-moz-range-thumb {
 .animate-shrink-width {
     animation: shrink-width linear forwards;
 }
+
+@media (min-width: 640px) {
+  body.user-shell { background-color: #05070c; }
+  body.user-shell #root {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 100vh;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 60px rgba(0, 0, 0, 0.6);
+  }
+  body.user-shell .fixed.left-0.right-0,
+  body.user-shell .fixed.inset-x-0 {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

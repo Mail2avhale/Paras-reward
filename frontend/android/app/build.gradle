@@ -351,8 +351,10 @@ android {
         //     - Full dark theme for the user app (PhonePe-inspired, violet accents)
         //     - Mall product detail blank-screen fix, notifications icon fix
         //     - minSdk 24 (Play automatic protection)
-        versionCode 53
-        versionName "1.6.1"
+        // versionCode 53 → 54 — v1.6.2 — crash fixes (AppOpenAd main-thread load,
+        //     MainActivity null bridge guard, MobileAds init off main thread)
+        versionCode 54
+        versionName "1.6.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Bundle native debug symbols (SYMBOL_TABLE) into the AAB so Play
         // Console can symbolicate native crashes (AdMob, Capacitor plugins).

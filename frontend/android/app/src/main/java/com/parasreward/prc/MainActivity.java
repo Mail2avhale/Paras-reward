@@ -33,6 +33,8 @@ public class MainActivity extends BridgeActivity {
         // other schemes back to the parent client so Capacitor's built-in
         // security / navigation rules keep working untouched.
         // -----------------------------------------------------------------
+        // bridge can be null if WebView failed to init (e.g. System WebView updating).
+        if (this.bridge == null) return;
         WebView webView = this.bridge.getWebView();
         if (webView != null) {
             webView.setWebViewClient(new BridgeWebViewClient(this.bridge) {

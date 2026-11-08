@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { NotificationProvider, useNotification } from "@/context/NotificationContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PageTitleUpdater } from "@/hooks/usePageTitle";
+import { UserShellWidth } from "@/components/UserShellWidth";
 // ToastContainer removed - using Sonner toast only
 import OfflineIndicator from "@/components/OfflineIndicator";
 import UpdateBanner from "@/components/UpdateBanner";
@@ -739,6 +740,7 @@ function AppContent({ user, handleLogin, handleLogout, refreshUserData, setUser 
       {user?.is_impersonation && <ImpersonationBanner user={user} onExit={() => { handleLogout(false); window.close(); }} />}
       <BrowserRouter>
         <PageTitleUpdater />
+        <UserShellWidth />
         <WebVitalsReporter user={user} />
         {/* Global PRC Redemption Service Charge pending banner — Feb 2026.
             Shows only when logged-in non-admin user has a PENDING 20% cash

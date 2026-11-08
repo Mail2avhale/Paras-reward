@@ -75,12 +75,16 @@ public class AppOpenAdPlugin extends Plugin {
             return;
         }
 
-        activity.runOnUiThread(() -> {
+        // MobileAds.initialize does disk I/O — run off the main thread to avoid ANRs.
+        new Thread(() -> {
             try {
                 MobileAds.initialize(getContext(), status -> Log.d(LOG_TAG, "MobileAds initialized"));
             } catch (Exception e) {
                 Log.w(LOG_TAG, "MobileAds.initialize threw: " + e.getMessage());
             }
+        }).start();
+
+        activity.runOnUiThread(() -> {
 
             // Feb 20 2026 — PRODUCTION-ONLY ENFORCEMENT.
             // Explicitly set RequestConfiguration with an EMPTY testDeviceIds
@@ -211,11 +215,17 @@ public class AppOpenAdPlugin extends Plugin {
     }
 
     private void loadAd() {
+        // AppOpenAd.load must run on the main thread (IllegalStateException otherwise).
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            new Handler(Looper.getMainLooper()).post(this::loadAd);
+            return;
+        }
         if (isLoading || isAdAvailable() || adUnitId == null) return;
         isLoading = true;
 
-        AdRequest request = new AdRequest.Builder().build();
-        AppOpenAd.load(
+        try {
+            AdRequest request = new AdRequest.Builder().build();
+            AppOpenAd.load(
             getContext(),
             adUnitId,
             request,
@@ -235,7 +245,11 @@ public class AppOpenAdPlugin extends Plugin {
                     Log.w(LOG_TAG, "App Open ad failed to load: " + error.getMessage());
                 }
             }
-        );
+            );
+        } catch (Exception e) {
+            isLoading = false;
+            Log.w(LOG_TAG, "App Open ad load threw: " + e.getMessage());
+        }
     }
 
     private boolean showAdIfAvailable() {
@@ -270,7 +284,15 @@ public class AppOpenAdPlugin extends Plugin {
             }
         });
 
-        appOpenAd.show(activity);
-        return true;
+        if (activity.isFinishing() || activity.isDestroyed()) return false;
+        try {
+            appOpenAd.show(activity);
+            return true;
+        } catch (Exception e) {
+            Log.w(LOG_TAG, "App Open show threw: " + e.getMessage());
+            appOpenAd = null;
+            isShowing = false;
+            return false;
+        }
     }
 }
