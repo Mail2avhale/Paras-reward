@@ -1333,6 +1333,36 @@ async def admin_low_balance_clear():
     return {"success": True}
 
 
+@router.get("/admin/eko-wallet-diagnostics")
+async def admin_eko_wallet_diagnostics():
+    """Admin: compare Eko balance APIs (v2 vs v3) + last low-balance paybill response."""
+    v3 = os.environ.get("EKO_V3_BASE_URL") or BASE_URL.replace(":25002", "").rstrip("/") + "/v3"
+    calls = [
+        ("v2_balance", f"{BASE_URL}/v2/customers/mobile_number:{INITIATOR_ID}/balance", {"initiator_id": INITIATOR_ID, "user_code": USER_CODE}),
+        ("v1_balance", f"{BASE_URL}/v1/customers/mobile_number:{INITIATOR_ID}/balance", {"initiator_id": INITIATOR_ID, "user_code": USER_CODE}),
+        ("v3_balance", f"{v3}/user/account/balance/{INITIATOR_ID}", {"initiator_id": INITIATOR_ID, "customer_id_type": "mobile_number"}),
+    ]
+    out = {"initiator_id": INITIATOR_ID, "user_code": USER_CODE, "base_url": BASE_URL, "v3_base_url": v3}
+    for name, url, params in calls:
+        ts = str(round(time.time() * 1000))
+        headers = {"developer_key": DEVELOPER_KEY, "secret-key": _generate_secret_key(ts),
+                   "secret-key-timestamp": ts, "Accept": "application/json"}
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(url, headers=headers, params=params)
+            out[name] = {"http": r.status_code, "body": r.text[:600]}
+        except Exception as e:
+            out[name] = {"error": str(e)[:200]}
+    last = await db.recharge_transactions.find_one(
+        {"status": "failed", "eko_error": {"$regex": "Low balance", "$options": "i"}},
+        {"_id": 0, "request_id": 1, "created_at": 1, "amount_inr": 1, "eko_error": 1, "eko_response": 1},
+        sort=[("created_at", -1)])
+    if last:
+        last["eko_response"] = str(last.get("eko_response"))[:1200]
+    out["last_low_balance_txn"] = last
+    return out
+
+
 @router.get("/admin/enquiry-debug/{request_id}")
 async def admin_enquiry_debug(request_id: str):
     """Admin: raw Eko enquiry attempts (status codes + body snippets) for troubleshooting."""
