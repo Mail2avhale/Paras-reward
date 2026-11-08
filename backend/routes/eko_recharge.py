@@ -16,7 +16,7 @@ Business Rules:
   - All business/Eko-wallet errors → generic "Technical error" to user
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -233,6 +233,82 @@ def _generate_headers(timestamp: str) -> dict:
         "Accept-Encoding": "gzip",
         "User-Agent": "okhttp/3.9.0"
     }
+
+
+def _v3_base() -> str:
+    return os.environ.get("EKO_V3_BASE_URL") or BASE_URL.replace(":25002", "").rstrip("/") + "/v3"
+
+
+def _v3_headers() -> dict:
+    ts = str(round(time.time() * 1000))
+    return {"developer_key": DEVELOPER_KEY, "secret-key": _generate_secret_key(ts),
+            "secret-key-timestamp": ts, "content-type": "application/json"}
+
+
+async def _pay_api_version() -> str:
+    f = await db.system_flags.find_one({"_id": "eko_pay_api"})
+    return (f or {}).get("value") or os.environ.get("EKO_PAY_API", "v2")
+
+
+async def _v3_get(path: str, params: dict) -> dict:
+    h = _v3_headers()
+    h.pop("content-type", None)
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        r = await client.get(f"{_v3_base()}{path}", headers=h, params={"initiator_id": INITIATOR_ID, **params})
+    try:
+        return r.json()
+    except Exception:
+        return {"status": -1, "message": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+
+def _dep(resp: dict, name: str):
+    for grp in (resp.get("dependent_params") or (resp.get("data") or {}).get("dependent_params") or []):
+        if grp.get("name") == name:
+            return grp.get("value")
+    return None
+
+
+@router.get("/detect-operator/{mobile}")
+async def detect_operator(mobile: str):
+    """Auto-detect prepaid operator code + circle for a mobile number (Eko v3)."""
+    if not re.fullmatch(r"[6-9]\d{9}", mobile or ""):
+        raise HTTPException(status_code=400, detail="Enter a valid 10-digit mobile number")
+    resp = await _v3_get(f"/customer/payment/bbps/recharge/{mobile}/operator", {})
+    op, circle = _dep(resp, "phone_operator_code"), _dep(resp, "circle_area")
+    return {"success": op is not None, "operator_id": str(op) if op is not None else None,
+            "circle": str(circle) if circle is not None else None, "message": resp.get("message")}
+
+
+@router.get("/plans/{mobile}")
+async def recharge_plans(mobile: str, operator_id: str, circle: str):
+    """Prepaid plans for operator + circle (Eko v3). Empty list → user may enter an amount."""
+    resp = await _v3_get(f"/customer/payment/bbps/recharge/{mobile}/operator/plans",
+                         {"phone_operator_code": operator_id, "circleid": circle})
+    raw = _dep(resp, "req_list") or []
+    plans = []
+    for p in raw if isinstance(raw, list) else []:
+        try:
+            amt = int(float(p.get("amount") or p.get("price") or 0))
+        except (TypeError, ValueError):
+            continue
+        if amt > 0:
+            plans.append({"amount": amt, "validity": p.get("validity") or "",
+                          "description": (p.get("plan_description") or p.get("description") or "")[:300]})
+    plans.sort(key=lambda x: x["amount"])
+    return {"success": True, "plans": plans, "available": bool(plans), "response_type_id": resp.get("response_type_id")}
+
+
+@router.post("/admin/pay-api/{version}")
+async def admin_set_pay_api(version: str):
+    if version not in ("v2", "v3"):
+        raise HTTPException(status_code=400, detail="version must be v2 or v3")
+    await db.system_flags.update_one({"_id": "eko_pay_api"}, {"$set": {"value": version}}, upsert=True)
+    return {"success": True, "pay_api": version}
+
+
+@router.get("/admin/pay-api")
+async def admin_get_pay_api():
+    return {"pay_api": await _pay_api_version()}
 
 
 async def _eko_enquiry(txn: dict, debug: bool = False):
@@ -871,6 +947,24 @@ async def initiate_recharge(data: RechargeRequest):
         body["billfetchresponse"] = data.billfetchresponse
 
     eko_url = f"{BASE_URL}/v2/billpayments/paybill?initiator_id={INITIATOR_ID}"
+    pay_api = await _pay_api_version()
+    if pay_api == "v3":
+        eko_url = f"{_v3_base()}/customer/payment/bbps"
+        headers = _v3_headers()
+        body = {
+            "initiator_id": INITIATOR_ID,
+            "phone_operator_code": str(data.operator_id),
+            "utility_acc_no": data.number,
+            "confirmation_mobile_no": confirmation_mobile,
+            "sender_name": sender_name,
+            "category": 5 if data.recharge_type == "mobile" else 4,
+            "amount": int_amount,
+            "client_ref_id": client_ref_id,
+            "source_ip": SOURCE_IP,
+        }
+        if data.billfetchresponse:
+            body["billfetchresponse"] = data.billfetchresponse
+    await db.recharge_transactions.update_one({"request_id": request_id}, {"$set": {"eko_api": pay_api}})
     logging.info(f"[RECHARGE] Calling Eko: user={data.user_id}, type={data.recharge_type}, "
                  f"number={data.number}, amount=₹{int_amount}, prc={total_prc:.2f}, ref={client_ref_id}")
 

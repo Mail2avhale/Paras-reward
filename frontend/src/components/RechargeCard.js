@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { API } from "../lib/api";
+import RechargePlanPicker from './RechargePlanPicker';
 
 const RechargeCard = ({ user, stats }) => {
   const [rechargeType, setRechargeType] = useState('mobile');
@@ -487,6 +488,16 @@ const RechargeCard = ({ user, stats }) => {
             Maximum you can enter now: ₹{maxAllowed}
           </p>
         )}
+        <RechargePlanPicker
+          number={number}
+          rechargeType={rechargeType}
+          operators={operators}
+          selectedOperator={selectedOperator}
+          onOperatorDetected={(id) => { if (!selectedOperator) handleOperatorChange(id); }}
+          amount={amount}
+          onPick={setAmount}
+          maxAllowed={maxAllowed}
+        />
         {prcEstimate > 0 && (
           <>
           <p className="text-gray-500 text-[10px] mt-1 pl-1" data-testid="recharge-prc-estimate">
