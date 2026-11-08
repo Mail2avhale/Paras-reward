@@ -35,7 +35,7 @@ const RechargePlanPicker = ({ number, rechargeType, operators, selectedOperator,
 
   return (
     <div data-testid="recharge-plan-picker" className="mt-2">
-      <p className="text-[11px] text-gray-400 mb-1.5 pl-1">Choose a plan {loading && <Loader2 className="inline h-3 w-3 animate-spin" />}</p>
+      <p className="text-[11px] text-gray-400 mb-1.5 pl-1">Choose a plan {plans.length > 3 && <span className="text-gray-500">· {plans.length} plans, swipe for more →</span>} {loading && <Loader2 className="inline h-3 w-3 animate-spin" />}</p>
       {!loading && plans.length === 0 && <p className="text-[11px] text-gray-500 pl-1" data-testid="no-plans">Plans not available — enter the amount manually.</p>}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {plans.map((p) => {

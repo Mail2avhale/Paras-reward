@@ -493,7 +493,7 @@ const RechargeCard = ({ user, stats }) => {
           rechargeType={rechargeType}
           operators={operators}
           selectedOperator={selectedOperator}
-          onOperatorDetected={(id) => { if (!selectedOperator) handleOperatorChange(id); }}
+          onOperatorDetected={(id) => { if (id !== selectedOperator) handleOperatorChange(id); }}
           amount={amount}
           onPick={setAmount}
           maxAllowed={maxAllowed}

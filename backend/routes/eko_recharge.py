@@ -16,7 +16,7 @@ Business Rules:
   - All business/Eko-wallet errors → generic "Technical error" to user
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -282,6 +282,9 @@ async def detect_operator(mobile: str):
 @router.get("/plans/{mobile}")
 async def recharge_plans(mobile: str, operator_id: str, circle: str):
     """Prepaid plans for operator + circle (Eko v3). Empty list → user may enter an amount."""
+    if not (re.fullmatch(r"[6-9]\d{9}", mobile or "") and re.fullmatch(r"\d{1,6}", operator_id or "")
+            and re.fullmatch(r"\d{1,4}", circle or "")):
+        raise HTTPException(status_code=400, detail="Invalid number, operator or circle")
     resp = await _v3_get(f"/customer/payment/bbps/recharge/{mobile}/operator/plans",
                          {"phone_operator_code": operator_id, "circleid": circle})
     raw = _dep(resp, "req_list") or []
@@ -299,10 +302,14 @@ async def recharge_plans(mobile: str, operator_id: str, circle: str):
 
 
 @router.post("/admin/pay-api/{version}")
-async def admin_set_pay_api(version: str):
+async def admin_set_pay_api(version: str, request: Request):
+    admin = getattr(request.state, "admin_user", None) or {}
+    if admin.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Only admin can switch the payment API")
     if version not in ("v2", "v3"):
         raise HTTPException(status_code=400, detail="version must be v2 or v3")
-    await db.system_flags.update_one({"_id": "eko_pay_api"}, {"$set": {"value": version}}, upsert=True)
+    await db.system_flags.update_one({"_id": "eko_pay_api"}, {"$set": {
+        "value": version, "changed_by": admin.get("uid") or admin.get("sub"), "changed_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
     return {"success": True, "pay_api": version}
 
 

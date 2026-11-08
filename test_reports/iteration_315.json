@@ -1,0 +1,38 @@
+{
+  "summary": "Tested the Eko v3 operator auto-detect, plan list and admin pay-api switch on both backend and UI. Backend: 9/9 pytest pass. detect-operator for 9936606966 returns {success:true, operator_id:'90', circle:'14'}. Invalid numbers (123, starting with 5, 11 digits, letters) return 400. The plans call returned 33 Jio plans, sorted, each {amount:int, validity, description}, with no duplicate amounts. pay-api GET/POST work (v2->v3->v9 gives 400->back to v2, confirmed v2 at the end). Both return 401 without a token. UI (mobile 390x844, elite user 9970100782): typing 9936606966 auto-selects Jio Prepaid (90). The picker shows 33 chips. Chips up to 500 are enabled and 579+ are disabled. Clicking plan-chip-77 sets the amount to 77 and shows plan-description. A force-click on a disabled chip does not change the amount. An invalid number (12345) shows no picker. One real bug: when the user changes the number to a different operator, the operator stays as the old one and the wrong plans are shown. No recharge was submitted.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/recharge/admin/pay-api/{version}", "issue": "Only the AdminProtectionMiddleware guards this route, and it lets the sub_admin role through. So a sub_admin can switch the live payment API. Consider a strict admin-only check plus an audit log entry (who/when)."},
+      {"endpoint": "GET /api/recharge/plans/{mobile}", "issue": "Does not validate mobile/operator_id/circle (detect-operator does). Any string is sent on to Eko. It is also public and unauthenticated, as is detect-operator: anyone can use it to proxy Eko lookups, with no rate limit or cache."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "RechargePlanPicker / RechargeCard onOperatorDetected", "issue": "Operator is not re-detected when the number changes. Typing 9936606966 sets Jio (90). Then changing the number to 9810012345 (detect API returns Airtel, operator_id 1) leaves the select on Jio (90) and still shows the 33 Jio plans. Cause: RechargeCard line 496 `if (!selectedOperator) handleOperatorChange(id)` skips auto-select once an operator is set. Risk: user recharges an Airtel number with the Jio operator/plan. Fix: track whether the operator was auto-detected or picked by the user; override when it was auto-detected, or when detection finds a different operator for a new number.", "selector": "[data-testid='recharge-operator-select']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Quick Recharge plan picker", "issues": ["The chip row scrolls sideways with no visible hint (no scrollbar, no fade edge). Users may not see that there are more plans.", "The picked chip's highlight can scroll out of view. Fine, but consider scrollIntoView on the active chip."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_eko_v3_detect_plans_iter315.py", "/app/test_reports/pytest/pytest_iter315.xml"],
+  "action_items": [
+    "HIGH: Re-run operator auto-select when the number changes (RechargeCard.js ~line 496). Don't block it with `!selectedOperator` when the current operator was auto-detected.",
+    "Make the v3 pay header match Eko's v3 BBPS paybill spec: the v2 path sends request_hash, but _v3_headers() for /customer/payment/bbps does not. The v3 body also drops user_code and latlong. Check against the Eko v3 docs before switching production to v3, or the first v3 payment may fail or go pending.",
+    "Optional: restrict pay-api POST to role 'admin' only and log changes; validate inputs and rate-limit/cache the public detect/plans endpoints."
+  ],
+  "critical_code_review_comments": [
+    "RechargePlanPicker detect effect leaves `operators` out of its deps. If detection finishes before the operator list loads, auto-select is skipped for good (no retry).",
+    "In the picker, the chip's onPick does not check maxAllowed (only the disabled attribute stops it). OK, but the backend must still enforce the 500 cap, and it does in initiate.",
+    "eko_recharge.py is 3260 lines and should be split into modules.",
+    "In the Step 9 v3 branch, the v2 headers/request_hash are built and then overwritten. Harmless but confusing."
+  ],
+  "updated_files": ["/app/backend/tests/test_eko_v3_detect_plans_iter315.py"],
+  "success_rate": {"backend": "100%", "frontend": "90% (1 bug: operator not re-detected when the number changes)"},
+  "seed_data_creation": "None. The pay-api flag was switched to v3 during the test and restored to v2 (confirmed).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login uses a JSON body {identifier,password} on /api/auth/login. UI login: fill login-identifier-input, click login-submit-btn, type the 6-digit PIN, click submit again. Elite user 9970100782/997010 sees Quick Recharge on /dashboard. Detect results: 9810012345 -> Airtel(1)/circle 5, 9415012345 -> BSNL(5)/21, 9839012345 -> Vi(400)/21. Never call /api/recharge/initiate.",
+  "rca of the issue": "Repro: open Quick Recharge, type 9936606966 (Jio auto-selected), select all, type 9810012345. Operator stays Jio Prepaid and Jio plans show. Root cause: the onOperatorDetected callback in RechargeCard only applies the detected operator when selectedOperator is empty."
+}
